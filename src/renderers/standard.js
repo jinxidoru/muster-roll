@@ -335,6 +335,44 @@ function sectionList(items, twoCol) {
   );
 }
 
+// Split a stratagem's body into labeled steps. A line beginning with an
+// ALL-CAPS label + colon (WHEN: / TARGET: / EFFECT: / RESTRICTIONS: …) starts a
+// new step; following unlabeled lines continue it. Returns [{ label, body }]
+// (label '' for any leading unlabeled text).
+function stratagemSteps(text) {
+  const steps = [];
+  let cur = null;
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = /^([A-Z][A-Z0-9'’/ -]{1,22}):\s*(.*)$/.exec(line);
+    if (m) { cur = { label: m[1].trim(), body: m[2].trim() }; steps.push(cur); }
+    else if (cur) { cur.body += (cur.body ? ' ' : '') + line; }
+    else { cur = { label: '', body: line }; steps.push(cur); }
+  }
+  return steps;
+}
+
+// Stratagem as a titled block: "Name (Phase)" with the CP cost right-justified,
+// then each WHEN/TARGET/EFFECT step as a hanging-indent bullet. The title sits
+// tight against the first bullet; trailing space separates one stratagem from
+// the next.
+function stratagemStepItem(s) {
+  const title = s.phase ? `${s.name} (${s.phase})` : s.name;
+  const header =
+    `#block(below: 1pt)[#grid(columns: (1fr, auto), column-gutter: 6pt, align: (left + bottom, right + bottom),\n` +
+    `  text(weight: "bold", ${ts(title)}),\n` +
+    `  text(weight: "bold", fill: accent, ${ts(`${s.cp}CP`)}))]`;
+  const lis = stratagemSteps(s.text).map((st) => {
+    const body = mk(clean(st.body));
+    return st.label ? `[#text(weight: "bold")[${mk(st.label)}:] ${body}]` : `[${body}]`;
+  });
+  const list = lis.length
+    ? `#block(above: 1pt)[#list(marker: text(fill: accent)[•], indent: 1pt, body-indent: 4pt, spacing: 2.6pt,\n  ${lis.join(',\n  ')})]`
+    : '';
+  return `#text(size: 7pt)[${header}\n${list}]\n#v(6pt)`;
+}
+
 function render(army, options = {}) {
   const accent = resolveAccent(options, army);
   const paper = PAPERS[options.paper] || 'us-letter';
@@ -413,13 +451,11 @@ function render(army, options = {}) {
   }
 
   // Detachment stratagems, below the rules, in the same two-column layout.
+  // Either as titled blocks with bulleted WHEN/TARGET/EFFECT steps (default) or
+  // as a single compact paragraph each.
   if (stratagems.length) {
     doc += `#section("Stratagems")\n`;
-    const items = stratagems.map((s) => {
-      const head = `${s.name} (${s.cp}CP${s.phase ? ` · ${s.phase}` : ''})`;
-      return `#text(size: 7pt)[#text(weight: "bold")[${mk(head)} — ] ${mk(clean(s.text || ''))}]`;
-    });
-    doc += sectionList(items, opts.detailsTwoColumn);
+    doc += sectionList(stratagems.map(stratagemStepItem), opts.detailsTwoColumn);
   }
 
   // Keyword glossary: define every weapon/core keyword the army references AND
