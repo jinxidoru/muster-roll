@@ -36,9 +36,11 @@ function preamble(accent, paper) {
   ]
   v(2pt)
 }
+// sticky: a section header is never left as the last thing on a page — it moves
+// to the next page to stay with the first of its content.
 #let section(title) = {
   v(4pt)
-  block(width: 100%, fill: band, inset: (x: 5pt, y: 3pt), radius: 1.5pt)[
+  block(width: 100%, sticky: true, fill: band, inset: (x: 5pt, y: 3pt), radius: 1.5pt)[
     #text(weight: "bold", size: 9pt, fill: ink, upper(title))
   ]
   v(2pt)

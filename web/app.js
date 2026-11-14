@@ -18,7 +18,7 @@ const WASM = {
 };
 const FONTS = ['Arimo-Regular.ttf', 'Arimo-Bold.ttf', 'Arimo-Italic.ttf', 'Arimo-BoldItalic.ttf', 'Anton.ttf']
   .map((f) => new URL(`assets/fonts/${f}`, document.baseURI).href);
-const LS_KEY = '40k-roster-pdf/settings';
+const LS_KEY = 'muster-roll/settings';
 
 const SPINNER_HTML = '<div class="spinner" aria-hidden="true"></div><p>Loading the PDF engine…</p>';
 
@@ -284,7 +284,7 @@ function buildOptions() {
   }
 }
 
-const RECENT_COLORS_KEY = '40k-roster-pdf/recent-colors';
+const RECENT_COLORS_KEY = 'muster-roll/recent-colors';
 function loadRecentColors() {
   try { return JSON.parse(localStorage.getItem(RECENT_COLORS_KEY)) || []; } catch { return []; }
 }

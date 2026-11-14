@@ -20,7 +20,7 @@
 
 import { openDB, idbGet, idbGetAll, idbPut, idbDelete } from './idb.js';
 
-const DB_NAME = '40k-roster-pdf/armies';
+const DB_NAME = 'muster-roll/armies';
 const DB_VERSION = 1;
 const STORE = 'armies';
 

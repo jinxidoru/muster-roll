@@ -14,7 +14,7 @@ Two import formats are supported:
   cross-referencing **[Wahapedia](https://wahapedia.ru)** datasheet data pulled onto
   your device.
 
-**▶ Live app: https://jinxidoru.github.io/40k-roster-pdf/** — everything runs in your
+**▶ Live app: https://jinxidoru.github.io/muster-roll/** — everything runs in your
 browser; nothing is uploaded.
 
 ![example sheet](docs/example.png)

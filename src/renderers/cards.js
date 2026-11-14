@@ -74,18 +74,18 @@ export default {
       help: 'Add the universal Core stratagems (Command Re-roll, Go to Ground, Tank Shock, Grenade, …) to the stratagems card(s), alongside the detachment stratagems.',
     },
     {
-      key: 'accent',
-      label: 'Color',
-      type: 'color',
-      default: 'faction',
-      help: 'Accent color for titles, stat boxes, and the border. Default uses the army’s faction/sub-faction color; or pick another color.',
-    },
-    {
       key: 'invAtBottom',
       label: 'Inv Sv at bottom',
       type: 'bool',
       default: false,
       help: 'Place the invulnerable-save shield at the bottom of the stat rail. Off = just below the armour save (Sv).',
+    },
+    {
+      key: 'accent',
+      label: 'Color',
+      type: 'color',
+      default: 'faction',
+      help: 'Accent color for titles, stat boxes, and the border. Default uses the army’s faction/sub-faction color; or pick another color.',
     },
   ],
 

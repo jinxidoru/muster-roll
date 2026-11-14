@@ -18,7 +18,7 @@ import { openDB, idbGet, idbPut, idbClear } from './idb.js';
 import { WAHAPEDIA_BASE } from '../src/wahapedia.js';
 import { buildWahapediaDB, USED_FILES } from '../src/wahapedia-index.js';
 
-const DB_NAME = '40k-roster-pdf/wahapedia';
+const DB_NAME = 'muster-roll/wahapedia';
 const DB_VERSION = 1;
 const FILES_STORE = 'files'; // key = csv name, value = text
 const META_STORE = 'meta';   // key 'meta' -> { lastUpdate, syncedAt, base }
