@@ -304,14 +304,6 @@ function unitDetail(u, opts = {}) {
 // Letter), the US analogue of A5.
 const PAPERS = { 'us-letter': 'us-letter', 'half-letter': 'us-statement', a4: 'a4', a5: 'a5' };
 
-// Keyword-glossary mode: 'none' | 'include' | 'separate'. Accepts legacy values
-// (true / 'show' -> 'include') so older persisted/CLI values still work.
-function glossaryMode(v) {
-  if (v === 'include' || v === 'separate') return v;
-  if (v === 'show' || v === true || v === 'true') return 'include';
-  return 'none';
-}
-
 // Reduce a keyword token to a base name for matching against glossary keys:
 // drop conditional (":…"), a trailing value ("1", "4+", "D3"), and any subtype
 // after a hyphen ("Anti-infantry" -> "anti", "Close-quarters" -> "close").
@@ -352,7 +344,9 @@ function render(army, options = {}) {
     coreFactionInAbilities: bool(options.coreFactionInAbilities, true),
     detailsTwoColumn: bool(options.detailsTwoColumn, true),
     pageNumbers: bool(options.pageNumbers, false),
-    keywordGlossary: glossaryMode(options.keywordGlossary),
+    showStratagems: bool(options.showStratagems, true),
+    showGlossary: bool(options.showGlossary, false),
+    pageBreaks: bool(options.pageBreaks, false),
   };
   // Where enhancements live: with each unit (inline on its datasheet) when on,
   // else in a separate section grouped with the army & detachment rules (default).
@@ -387,16 +381,17 @@ function render(army, options = {}) {
     doc += unitDetail(g.unit, { ...opts, enhancements: enhWithUnit ? g.enhancements : [] });
   }
 
-  if (army.stratagems.length) {
-    doc += `#section("Stratagems")\n`;
-    for (const s of army.stratagems) {
-      const head = `${s.name} — ${s.cp}CP${s.phase ? ` · ${s.phase}` : ''}`;
-      doc += `#text(size: 7pt)[#text(weight: "bold")[${mk(head)} — ] ${mk(clean(s.text || ''))}]\n\n`;
-    }
-  }
+  // --- rules group (army & detachment rules, enhancements, stratagems) ------
+  // These three are one print group; stratagems sit below the rules. When the
+  // page-breaks option is on, this whole group starts on a fresh page.
+  const rules = armyRules(army);
+  const enhancements = enhWithUnit ? [] : army.enhancements;
+  const stratagems = opts.showStratagems ? army.stratagems : [];
+  const hasRulesGroup = rules.length || enhancements.length || stratagems.length;
+
+  if (hasRulesGroup && opts.pageBreaks) doc += `#pagebreak()\n`;
 
   // Shared army/detachment rules (names + any text), de-duplicated.
-  const rules = armyRules(army);
   if (rules.length) {
     doc += `#section("Army & Detachment Rules")\n`;
     const items = rules.map((r) => {
@@ -410,7 +405,6 @@ function render(army, options = {}) {
 
   // Enhancements: shown inline with their units when enhWithUnit; otherwise in
   // their own section below the army rules (same band styling as the rules).
-  const enhancements = enhWithUnit ? [] : army.enhancements;
   if (enhancements.length) {
     doc += `#section("Enhancements")\n`;
     const items = enhancements.map((e) =>
@@ -418,10 +412,20 @@ function render(army, options = {}) {
     doc += sectionList(items, opts.detailsTwoColumn);
   }
 
+  // Detachment stratagems, below the rules, in the same two-column layout.
+  if (stratagems.length) {
+    doc += `#section("Stratagems")\n`;
+    const items = stratagems.map((s) => {
+      const head = `${s.name} (${s.cp}CP${s.phase ? ` · ${s.phase}` : ''})`;
+      return `#text(size: 7pt)[#text(weight: "bold")[${mk(head)} — ] ${mk(clean(s.text || ''))}]`;
+    });
+    doc += sectionList(items, opts.detailsTwoColumn);
+  }
+
   // Keyword glossary: define every weapon/core keyword the army references AND
   // the export actually carries text for. Referenced-but-undefined keywords
   // (e.g. Lethal Hits — never defined in the export) are counted, not invented.
-  if (opts.keywordGlossary !== 'none') {
+  if (opts.showGlossary) {
     const refBases = new Set();
     for (const u of army.units) {
       for (const w of [...u.ranged, ...u.melee]) {
@@ -450,7 +454,7 @@ function render(army, options = {}) {
     const undefinedCount = [...refBases].filter((b) => b && !byBase.has(b)).length;
 
     if (entries.length) {
-      if (opts.keywordGlossary === 'separate') doc += `#pagebreak()\n`;
+      if (opts.pageBreaks) doc += `#pagebreak()\n`;
       doc += `#section("Keyword Glossary")\n`;
       const items = entries.map(({ name, text }) =>
         `#text(size: 7pt)[#text(weight: "bold")[${mk(name)} — ] ${mk(clean(text))}]`);
@@ -532,16 +536,25 @@ export default {
       help: 'On: show each enhancement inline on its unit’s datasheet. Off (default): list them in a separate section grouped with the army & detachment rules, each clearly marked “Enhancement — …”.',
     },
     {
-      key: 'keywordGlossary',
-      label: 'Keyword glossary',
-      type: 'select',
-      default: 'none',
-      help: 'A section defining every referenced weapon/core keyword the roster export includes rules text for (keywords it doesn’t define, e.g. Lethal Hits, are only counted in a footnote). “Include” appends it after the army rules; “Separate page” starts it on a fresh page.',
-      choices: [
-        { value: 'none', label: 'None' },
-        { value: 'include', label: 'Include' },
-        { value: 'separate', label: 'Separate page' },
-      ],
+      key: 'showStratagems',
+      label: 'Include stratagems',
+      type: 'bool',
+      default: true,
+      help: 'Show the detachment’s stratagems in a section below the army & detachment rules (same two-column layout). Inferred from the army’s detachment; only available when datasheet data is loaded.',
+    },
+    {
+      key: 'showGlossary',
+      label: 'Include keyword glossary',
+      type: 'bool',
+      default: false,
+      help: 'Append a section defining every referenced weapon/core keyword the data includes rules text for (keywords it doesn’t define, e.g. Lethal Hits, are only counted in a footnote).',
+    },
+    {
+      key: 'pageBreaks',
+      label: 'Page breaks between sections',
+      type: 'bool',
+      default: false,
+      help: 'Start a new page at each major boundary: units, then the rules / enhancements / stratagems group, then the keyword glossary. Off by default so everything flows together to save pages.',
     },
     {
       key: 'accent',

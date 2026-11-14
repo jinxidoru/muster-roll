@@ -1,9 +1,12 @@
-// Web UI: New Recruit roster JSON -> Typst -> PDF, entirely client-side.
-// Local modules (parse/render) are imported statically (fast); the heavy
-// typst.ts engine is imported dynamically behind a loading spinner, and the PDF
-// regenerates automatically on upload or when any option changes.
+// Preview controller: given a renderer-ready army model, render the SVG
+// preview, options, and (lazily) the print PDF — entirely client-side. The
+// heavy typst.ts engine is imported dynamically behind a loading spinner the
+// first time a preview is opened; the PDF regenerates on option changes.
+//
+// Parsing, storage, Wahapedia cross-reference, and routing live elsewhere
+// (web/main.js, web/manager.js, web/build-army.js). This module just takes an
+// `army` object (same shape src/parse.js emits) via showArmy().
 
-import { parseRoster, isNewRecruitRoster } from '../src/parse.js';
 import { renderers, byId, defaultRenderer } from '../src/render.js';
 import { FACTION_PALETTE, paletteColorFor, accentFor } from '../src/renderers/shared.js';
 
@@ -17,10 +20,13 @@ const FONTS = ['Arimo-Regular.ttf', 'Arimo-Bold.ttf', 'Arimo-Italic.ttf', 'Arimo
   .map((f) => new URL(`assets/fonts/${f}`, document.baseURI).href);
 const LS_KEY = '40k-roster-pdf/settings';
 
+const SPINNER_HTML = '<div class="spinner" aria-hidden="true"></div><p>Loading the PDF engine…</p>';
+
 const $ = (id) => document.getElementById(id);
 const els = {
-  loading: $('loading'), app: $('app'), drop: $('drop'), file: $('file'), pick: $('pick'),
+  loading: $('loading'), app: $('app'),
   renderer: $('renderer'), renderOptions: $('render-options'), options: $('options'), status: $('status'),
+  warnings: $('warnings'),
   summary: $('summary'), print: $('print'), download: $('download'), resetOptions: $('reset-options'),
   viewer: $('viewer'), printFrame: $('print-frame'), selectAll: $('select-all'),
 };
@@ -103,8 +109,8 @@ const MODULES = {
 
 let worker = null;
 let ready = false;
+let enginePromise = null; // memoized lazy engine init (first preview only)
 let army = null;
-let coreGlossary = {}; // bundled core-keyword definitions; {} if src/keywords.json is absent
 let currentRenderer = null;
 let currentOptions = {};
 let previewToken = 0; // supersedes stale single-preview renders
@@ -330,87 +336,57 @@ function colorControl(opt, id, val) {
   return wrap;
 }
 
-// --- file intake -----------------------------------------------------------
-els.pick.addEventListener('click', () => els.file.click());
-els.file.addEventListener('change', () => els.file.files[0] && loadFile(els.file.files[0]));
-['dragover', 'dragenter'].forEach((ev) =>
-  els.drop.addEventListener(ev, (e) => { e.preventDefault(); els.drop.classList.add('over'); }));
-['dragleave', 'drop'].forEach((ev) =>
-  els.drop.addEventListener(ev, () => els.drop.classList.remove('over')));
-els.drop.addEventListener('drop', (e) => {
-  e.preventDefault();
-  const f = e.dataTransfer.files[0];
-  if (f) loadFile(f);
-});
+// --- public preview API (called by the router/main) ------------------------
 
-async function loadFile(file) {
-  try {
-    loadRoster(JSON.parse(await file.text()));
-  } catch (err) {
-    setStatus(`Could not read that file: ${err.message}`, true);
-  }
-}
-
-function loadRoster(json) {
-  if (!isNewRecruitRoster(json)) {
-    setStatus('That file is not a New Recruit / BattleScribe roster export (no "roster" section).', true);
-    return;
-  }
-  army = parseRoster(json);
-  army.coreGlossary = coreGlossary;
+// Render a renderer-ready army model (same shape src/parse.js emits). Shows the
+// engine-loading spinner the first time, then the SVG preview. Resolves once the
+// preview is up (or rejects if the engine fails to load).
+export async function showArmy(model) {
+  army = model;
   cardSelection.clear();
   army.units.forEach((_u, i) => cardSelection.add(i)); // default: all cards selected
   auxDeselected.clear(); // default: all aux cards (summary/rules) included
+  invalidatePdf();
   els.renderOptions.hidden = false;
   buildOptions(); // refresh controls (e.g. color swatch now reflects the faction)
-  els.summary.textContent = `${army.meta.name} — ${army.meta.faction} · ${army.meta.detachment} · ${army.meta.points} pts · ${army.units.length} datasheets`;
-  // One anonymous event per loaded roster (not per re-render), plus the faction.
+  els.summary.textContent =
+    `${army.meta.name} — ${[army.meta.faction, army.meta.detachment].filter(Boolean).join(' · ')} · ${army.meta.points} pts · ${army.units.length} datasheets`;
+  showWarnings(army.warnings);
+
+  if (!ready) {
+    els.loading.innerHTML = SPINNER_HTML; // restore (a prior error may have replaced it)
+    els.loading.hidden = false;
+    els.app.hidden = true;
+  }
+  try {
+    await ensureEngine();
+  } catch (err) {
+    els.loading.hidden = false;
+    els.loading.innerHTML = `<p class="error">Couldn't load the PDF engine: ${err.message || err}</p>`;
+    throw err;
+  }
+  els.loading.hidden = true;
+  els.app.hidden = false;
+  // One anonymous event per opened army (not per re-render), plus the faction.
   track('pdf-generated');
   track(`faction/${slug(army.meta.faction) || 'unknown'}`);
   regenerate();
 }
 
-// Dev-only convenience: ?preload=<name> auto-loads staging/<name> so testing
-// doesn't require dropping a file each reload. Localhost only — staging/ is
-// gitignored and never deployed, so this is inert on the live site.
-// "Dev host" = localhost or a private-LAN address (so ?preload works when
-// testing from another device on the network via the machine's 192.168.x /
-// 10.x / 172.16–31.x IP). Public production hosts never match, and staging/ is
-// gitignored + never deployed, so preload stays inert on the live site either way.
-function isLocalhost() {
-  const h = location.hostname;
-  return (
-    /^(localhost|127\.|0\.0\.0\.0|::1|\[::1\])/.test(h) ||
-    /^10\./.test(h) ||
-    /^192\.168\./.test(h) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-    h.endsWith('.local')
-  );
-}
-// Load the bundled core-keyword definitions. Absent file (removed on purpose)
-// or any error → coreGlossary stays {} and the glossary quietly falls back to
-// roster-embedded definitions only. Never rejects.
-async function loadCoreKeywords() {
-  try {
-    const res = await fetch('src/keywords.json');
-    if (res.ok) coreGlossary = (await res.json()).keywords || {};
-  } catch { /* feature simply off */ }
+// Lazily initialize the typst engine once; subsequent calls reuse the promise.
+export function ensureEngine() {
+  if (ready) return Promise.resolve();
+  if (!enginePromise) enginePromise = initEngine();
+  return enginePromise;
 }
 
-async function preloadFromQuery() {
-  const name = new URLSearchParams(location.search).get('preload');
-  if (!name || !isLocalhost()) return;
-  const safe = name.replace(/[^\w.\- ]/g, ''); // strip path separators etc.
-  // Allow the .json to be omitted: ?preload=1k+Stomps → staging/1k Stomps.json
-  // (URLSearchParams already turns the "+" into a space).
-  const file = /\.json$/i.test(safe) ? safe : `${safe}.json`;
-  try {
-    const res = await fetch(`staging/${encodeURIComponent(file)}`);
-    if (!res.ok) { setStatus(`Preload failed: staging/${file} (HTTP ${res.status})`, true); return; }
-    loadRoster(await res.json());
-  } catch (err) {
-    setStatus(`Preload failed: ${err.message}`, true);
-  }
+function showWarnings(warnings) {
+  if (!warnings || !warnings.length) { els.warnings.hidden = true; els.warnings.textContent = ''; return; }
+  els.warnings.hidden = false;
+  els.warnings.textContent = warnings.length === 1
+    ? `⚠ ${warnings[0]}`
+    : `⚠ ${warnings.length} notes — ${warnings[0]}`;
+  els.warnings.title = warnings.join('\n');
 }
 
 // --- typst engine (in a worker) + generation --------------------------------
@@ -635,14 +611,6 @@ function slug(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-// --- boot: build controls (hidden), load engine + keywords, then reveal -----
+// Build the (hidden) option controls up front so they're ready when the first
+// army is shown. The engine itself loads lazily on the first showArmy().
 buildOptions();
-Promise.all([initEngine(), loadCoreKeywords()])
-  .then(() => {
-    els.loading.hidden = true;
-    els.app.hidden = false;
-    preloadFromQuery();
-  })
-  .catch((err) => {
-    els.loading.innerHTML = `<p class="error">Couldn't load the PDF engine: ${err.message || err}</p>`;
-  });

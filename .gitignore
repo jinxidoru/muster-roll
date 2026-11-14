@@ -10,3 +10,7 @@ npm-debug.log*
 
 # Local scratch rosters for testing (not tracked)
 staging/
+
+# Wahapedia CSV data export — Games Workshop IP mirrored by Wahapedia. Never
+# committed or re-hosted by us; pulled locally via scripts/fetch-wahapedia.js.
+data/

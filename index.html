@@ -4,74 +4,118 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>40k Roster PDF</title>
-  <meta name="description" content="Turn a New Recruit roster export into a printable Warhammer 40,000 quick-reference PDF, entirely in your browser." />
+  <meta name="description" content="Turn a New Recruit or official Games Workshop app roster export into a printable Warhammer 40,000 quick-reference PDF, entirely in your browser." />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#1a1a1a" />
   <link rel="stylesheet" href="web/style.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1>40k Roster PDF</h1>
-    <p>Drop a <a href="https://newrecruit.eu" target="_blank" rel="noopener">New Recruit</a> roster export and get a printable quick-reference PDF — generated entirely in your browser.</p>
+    <h1><a href="#/" class="home-link">40k Roster PDF</a></h1>
+    <p>Printable Warhammer 40,000 quick-reference sheets from your army lists — generated entirely in your browser.</p>
   </header>
 
   <main>
-    <div id="loading" class="loading">
-      <div class="spinner" aria-hidden="true"></div>
-      <p>Loading the PDF engine…</p>
-    </div>
+    <!-- ======================= ARMY MANAGER (landing) ======================= -->
+    <section id="manager" hidden>
+      <div class="manager-grid">
+        <div class="panel upload-panel">
+          <h2>Add an army</h2>
+          <div id="drop" class="drop">
+            <input id="file" type="file" accept="application/json,.json,text/plain,.txt" hidden />
+            <p><strong>Drop a roster export here</strong> or <button id="pick" type="button" class="link">choose a file</button>.</p>
+            <p class="hint">
+              <strong>New Recruit:</strong> Export → BattleScribe / JSON.<br />
+              <strong>GW app:</strong> a list → Share → copy/export text (.txt).<br />
+              Nothing is uploaded — it stays on your device.
+            </p>
+          </div>
+          <div class="paste-box">
+            <label for="paste-text">…or paste the export text</label>
+            <textarea id="paste-text" rows="6" placeholder="Paste a GW app export or New Recruit JSON here…"></textarea>
+            <button id="paste-add" class="btn text-btn" type="button">Add from text</button>
+          </div>
+          <p id="upload-status" class="status" role="status"></p>
 
-    <div id="app" hidden>
-      <section class="controls">
-        <div id="drop" class="drop">
-          <input id="file" type="file" accept="application/json,.json" hidden />
-          <p><strong>Drop your roster .json here</strong> or <button id="pick" type="button" class="link">choose a file</button>.</p>
-          <p class="hint">In New Recruit: <em>Export → BattleScribe / JSON</em>. Nothing is uploaded — it stays on your device.</p>
-        </div>
-
-        <div class="row">
-          <label for="renderer">Renderer</label>
-          <select id="renderer"></select>
-        </div>
-        <div id="render-options" hidden>
-          <hr />
-          <div id="options" class="options"></div>
-          <button id="reset-options" class="link reset-options" type="button">Reset options</button>
-        </div>
-
-        <p id="status" class="status" role="status"></p>
-
-        <p class="feedback">
-          Found a bug or have a suggestion?
-          <a href="https://github.com/jinxidoru/40k-roster-pdf/issues" target="_blank" rel="noopener">Submit it on GitHub</a>.
-        </p>
-      </section>
-
-      <section class="preview">
-        <div class="preview-head">
-          <span id="summary"></span>
-          <button id="select-all" class="btn text-btn" type="button" hidden>Unselect all</button>
-          <div class="actions">
-            <button id="print" class="btn" type="button" title="Print" aria-label="Print" hidden>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
-              </svg>
-            </button>
-            <a id="download" class="btn download" title="Download PDF" aria-label="Download PDF" hidden download>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </a>
+          <h2 class="data-head">Datasheet data</h2>
+          <div id="wahapedia-panel" class="wahapedia-panel">
+            <p class="wahapedia-status" id="wahapedia-status">Checking…</p>
+            <div class="wahapedia-actions">
+              <button id="wahapedia-sync" class="btn text-btn" type="button">Load data</button>
+            </div>
+            <div id="wahapedia-config" class="wahapedia-config" hidden>
+              <label for="wahapedia-base">Pass-through base URL</label>
+              <input id="wahapedia-base" type="url" placeholder="https://your-proxy.example/wh40k10ed" />
+              <button id="wahapedia-base-save" class="link" type="button">Save</button>
+              <p class="hint">GW data (Wahapedia) can't be fetched directly from a browser. Point this at a pass-through that forwards <code>wahapedia.ru/wh40k10ed</code> with CORS headers.</p>
+            </div>
           </div>
         </div>
-        <div id="viewer" class="viewer" tabindex="0" aria-label="Sheet preview"></div>
-        <iframe id="print-frame" title="Print" aria-hidden="true"></iframe>
-      </section>
+
+        <div class="panel list-panel">
+          <h2>Your armies</h2>
+          <ul id="army-list" class="army-list"></ul>
+          <p id="army-empty" class="empty" hidden>No armies yet. Add one from a roster export to get started.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================== PRINT PREVIEW ============================= -->
+    <div id="preview-view" hidden>
+      <p class="crumb"><a href="#/" class="link back-link">← All armies</a></p>
+
+      <div id="loading" class="loading" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading the PDF engine…</p>
+      </div>
+
+      <div id="app" hidden>
+        <section class="controls">
+          <div class="row">
+            <label for="renderer">Renderer</label>
+            <select id="renderer"></select>
+          </div>
+          <div id="render-options" hidden>
+            <hr />
+            <div id="options" class="options"></div>
+            <button id="reset-options" class="link reset-options" type="button">Reset options</button>
+          </div>
+
+          <p id="status" class="status" role="status"></p>
+          <p id="warnings" class="warnings" hidden></p>
+
+          <p class="feedback">
+            Found a bug or have a suggestion?
+            <a href="https://github.com/jinxidoru/40k-roster-pdf/issues" target="_blank" rel="noopener">Submit it on GitHub</a>.
+          </p>
+        </section>
+
+        <section class="preview">
+          <div class="preview-head">
+            <span id="summary"></span>
+            <button id="select-all" class="btn text-btn" type="button" hidden>Unselect all</button>
+            <div class="actions">
+              <button id="print" class="btn" type="button" title="Print" aria-label="Print" hidden>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
+                </svg>
+              </button>
+              <a id="download" class="btn download" title="Download PDF" aria-label="Download PDF" hidden download>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </a>
+            </div>
+          </div>
+          <div id="viewer" class="viewer" tabindex="0" aria-label="Sheet preview"></div>
+          <iframe id="print-frame" title="Print" aria-hidden="true"></iframe>
+        </section>
+      </div>
     </div>
   </main>
 
   <footer>
-    <p>Designed by Michael Bailey. Not affiliated with Games Workshop or New Recruit.</p>
+    <p>Designed by Michael Bailey. Not affiliated with Games Workshop, New Recruit, or Wahapedia. Datasheet data © Games Workshop, via <a href="https://wahapedia.ru" target="_blank" rel="noopener">Wahapedia</a>.</p>
   </footer>
 
   <!-- Version badge (bottom-right). "dev" locally; the deploy stamps the git sha
@@ -79,7 +123,7 @@
        line — the deploy substitution is line-based. -->
   <a id="version" class="version" href="https://github.com/jinxidoru/40k-roster-pdf" target="_blank" rel="noopener" title="Version (git commit)">dev</a>
 
-  <script type="module" src="web/app.js"></script>
+  <script type="module" src="web/main.js"></script>
 
   <!-- Anonymous, cookieless usage stats (GoatCounter). Loaded only off-localhost,
        so local development is never tracked. Visit with ?ignore-me-for-goat=1 to

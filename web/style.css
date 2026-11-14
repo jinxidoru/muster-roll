@@ -25,6 +25,8 @@ a { color: var(--accent); }
 .topbar h1 { margin: 0 0 4px; font-size: 20px; letter-spacing: .3px; }
 .topbar p { margin: 0; color: #cfcfd4; font-size: 14px; }
 .topbar a { color: #fff; }
+.home-link { text-decoration: none; }
+.home-link:hover { text-decoration: underline; }
 
 main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
 
@@ -111,6 +113,80 @@ select {
 
 .status { min-height: 1.4em; margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.error { color: var(--accent); }
+.warnings {
+  margin: 8px 0 0; font-size: 12.5px; color: #92400e; cursor: help;
+}
+
+/* ============================ ARMY MANAGER ============================= */
+.manager-grid {
+  display: grid; gap: 16px; grid-template-columns: 340px 1fr; align-items: start;
+}
+@media (max-width: 820px) { .manager-grid { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 16px;
+}
+.panel h2 { margin: 0 0 12px; font-size: 15px; }
+.panel h2.data-head { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+.paste-box { margin-top: 12px; font-size: 12.5px; }
+.paste-box label { display: block; font-weight: 600; color: var(--muted); }
+.paste-box textarea {
+  width: 100%; margin-top: 6px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; resize: vertical;
+}
+.paste-box .text-btn { margin-top: 6px; }
+
+.wahapedia-panel .wahapedia-status { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+.wahapedia-panel .err { color: var(--accent); }
+.wahapedia-actions { display: flex; gap: 8px; }
+.wahapedia-config {
+  margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding-top: 12px; border-top: 1px dashed var(--line);
+}
+.wahapedia-config label { font-weight: 600; font-size: 12.5px; width: 100%; }
+.wahapedia-config input {
+  flex: 1 1 180px; font: inherit; padding: 6px 8px;
+  border-radius: 6px; border: 1px solid #cbd5e1; background: #fff;
+}
+.wahapedia-config .hint { width: 100%; margin: 2px 0 0; }
+.wahapedia-config code { font-size: 11.5px; background: var(--bg); padding: 1px 4px; border-radius: 4px; }
+
+.army-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.army-card {
+  display: flex; align-items: stretch; gap: 8px;
+  border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
+}
+.army-card:hover { border-color: #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.army-open {
+  flex: 1; text-align: left; cursor: pointer; padding: 12px 14px;
+  background: none; border: 0; font: inherit; color: inherit; min-width: 0;
+}
+.army-title { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.army-name { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .3px;
+  padding: 2px 7px; border-radius: 999px; text-transform: uppercase;
+}
+.badge-gw { background: #eef4ff; color: #2563eb; }
+.badge-newrecruit { background: #ecfdf3; color: #16a34a; }
+.army-meta { font-size: 12.5px; color: var(--ink); }
+.army-when { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.army-actions { display: flex; flex-direction: column; border-left: 1px solid var(--line); }
+.army-act {
+  flex: 1; width: 40px; cursor: pointer; border: 0; background: none;
+  font-size: 14px; color: var(--muted);
+}
+.army-act:hover { background: var(--bg); color: var(--ink); }
+.army-act-delete:hover { color: var(--accent); }
+.army-act + .army-act { border-top: 1px solid var(--line); }
+.empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
+
+.crumb { margin: 0 0 12px; font-size: 13px; }
+.back-link { text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
 
 .preview { display: flex; flex-direction: column; min-height: 0; }
 .preview-head {
