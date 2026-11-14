@@ -1,10 +1,10 @@
 {
-  "name": "40k-roster-pdf",
+  "name": "muster-roll",
   "version": "0.2.0",
-  "description": "Render printable quick-reference PDF sheets from New Recruit (BattleScribe) 40k roster exports. Static web app + CLI.",
+  "description": "Muster Roll — printable Warhammer 40,000 quick-reference sheets and cards from New Recruit or official GW app army lists. Static web app + CLI.",
   "type": "module",
   "bin": {
-    "40k-roster-pdf": "scripts/build.js"
+    "muster-roll": "scripts/build.js"
   },
   "license": "MIT"
 }

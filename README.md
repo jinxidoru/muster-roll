@@ -1,4 +1,4 @@
-# 40k Roster PDF
+# Muster Roll
 
 Turn a Warhammer 40,000 army list into a clean, printable quick-reference PDF —
 stats, weapons, abilities, enhancements, army rules, and stratagems for your whole
