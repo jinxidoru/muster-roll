@@ -360,7 +360,7 @@ function stratagemSteps(text) {
 function stratagemStepItem(s) {
   const title = s.phase ? `${s.name} (${s.phase})` : s.name;
   const header =
-    `#block(below: 1pt)[#grid(columns: (1fr, auto), column-gutter: 6pt, align: (left + bottom, right + bottom),\n` +
+    `#block(below: 3pt)[#grid(columns: (1fr, auto), column-gutter: 6pt, align: (left + bottom, right + bottom),\n` +
     `  text(weight: "bold", ${ts(title)}),\n` +
     `  text(weight: "bold", fill: accent, ${ts(`${s.cp}CP`)}))]`;
   const lis = stratagemSteps(s.text).map((st) => {
@@ -368,7 +368,7 @@ function stratagemStepItem(s) {
     return st.label ? `[#text(weight: "bold")[${mk(st.label)}:] ${body}]` : `[${body}]`;
   });
   const list = lis.length
-    ? `#block(above: 1pt)[#list(marker: text(fill: accent)[•], indent: 1pt, body-indent: 4pt, spacing: 2.6pt,\n  ${lis.join(',\n  ')})]`
+    ? `#block(above: 3pt)[#list(marker: text(fill: accent)[•], indent: 1pt, body-indent: 4pt, spacing: 2.6pt,\n  ${lis.join(',\n  ')})]`
     : '';
   return `#text(size: 7pt)[${header}\n${list}]\n#v(6pt)`;
 }
