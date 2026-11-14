@@ -4,6 +4,7 @@
 import {
   clean, formatKeywords, ts, mk, statVal, bool, armyRules,
   splitProfiles, rosterGroups, subsetKeywords, datasheetGroups, resolveAccent,
+  armyStratagems, stratagemSteps, stratagemTitle,
 } from './shared.js';
 
 // Typst preamble (page/style + helper functions). `accent` is the faction color,
@@ -335,30 +336,12 @@ function sectionList(items, twoCol) {
   );
 }
 
-// Split a stratagem's body into labeled steps. A line beginning with an
-// ALL-CAPS label + colon (WHEN: / TARGET: / EFFECT: / RESTRICTIONS: …) starts a
-// new step; following unlabeled lines continue it. Returns [{ label, body }]
-// (label '' for any leading unlabeled text).
-function stratagemSteps(text) {
-  const steps = [];
-  let cur = null;
-  for (const raw of String(text || '').split('\n')) {
-    const line = raw.trim();
-    if (!line) continue;
-    const m = /^([A-Z][A-Z0-9'’/ -]{1,22}):\s*(.*)$/.exec(line);
-    if (m) { cur = { label: m[1].trim(), body: m[2].trim() }; steps.push(cur); }
-    else if (cur) { cur.body += (cur.body ? ' ' : '') + line; }
-    else { cur = { label: '', body: line }; steps.push(cur); }
-  }
-  return steps;
-}
-
 // Stratagem as a titled block: "Name (Phase)" with the CP cost right-justified,
 // then each WHEN/TARGET/EFFECT step as a hanging-indent bullet. The title sits
-// tight against the first bullet; trailing space separates one stratagem from
-// the next.
+// a small gap above the first bullet; trailing space separates one stratagem
+// from the next.
 function stratagemStepItem(s) {
-  const title = s.phase ? `${s.name} (${s.phase})` : s.name;
+  const title = stratagemTitle(s);
   const header =
     `#block(below: 3pt)[#grid(columns: (1fr, auto), column-gutter: 6pt, align: (left + bottom, right + bottom),\n` +
     `  text(weight: "bold", ${ts(title)}),\n` +
@@ -383,6 +366,7 @@ function render(army, options = {}) {
     detailsTwoColumn: bool(options.detailsTwoColumn, true),
     pageNumbers: bool(options.pageNumbers, false),
     showStratagems: bool(options.showStratagems, true),
+    showCoreStratagems: bool(options.showCoreStratagems, false),
     showGlossary: bool(options.showGlossary, false),
     pageBreaks: bool(options.pageBreaks, false),
   };
@@ -424,7 +408,7 @@ function render(army, options = {}) {
   // page-breaks option is on, this whole group starts on a fresh page.
   const rules = armyRules(army);
   const enhancements = enhWithUnit ? [] : army.enhancements;
-  const stratagems = opts.showStratagems ? army.stratagems : [];
+  const stratagems = armyStratagems(army, { detachment: opts.showStratagems, core: opts.showCoreStratagems });
   const hasRulesGroup = rules.length || enhancements.length || stratagems.length;
 
   if (hasRulesGroup && opts.pageBreaks) doc += `#pagebreak()\n`;
@@ -506,7 +490,7 @@ function render(army, options = {}) {
 
 export default {
   id: 'standard',
-  name: 'Standard',
+  name: 'Sheets',
   description: 'Dense whole-army quick-reference on one or two pages.',
   options: [
     {
@@ -577,6 +561,13 @@ export default {
       type: 'bool',
       default: true,
       help: 'Show the detachment’s stratagems in a section below the army & detachment rules (same two-column layout). Inferred from the army’s detachment; only available when datasheet data is loaded.',
+    },
+    {
+      key: 'showCoreStratagems',
+      label: 'Include core stratagems',
+      type: 'bool',
+      default: false,
+      help: 'Also include the universal Core stratagems (Command Re-roll, Go to Ground, Tank Shock, Grenade, …) that every army can use, alongside the detachment stratagems.',
     },
     {
       key: 'showGlossary',

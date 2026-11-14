@@ -25,7 +25,7 @@ const SPINNER_HTML = '<div class="spinner" aria-hidden="true"></div><p>Loading t
 const $ = (id) => document.getElementById(id);
 const els = {
   loading: $('loading'), app: $('app'),
-  renderer: $('renderer'), renderOptions: $('render-options'), options: $('options'), status: $('status'),
+  rendererTabs: $('renderer-tabs'), renderOptions: $('render-options'), options: $('options'), status: $('status'),
   warnings: $('warnings'),
   summary: $('summary'), print: $('print'), download: $('download'), resetOptions: $('reset-options'),
   viewer: $('viewer'), printFrame: $('print-frame'), selectAll: $('select-all'),
@@ -180,20 +180,32 @@ function defaultPaper() {
   return 'us-letter';
 }
 
-// --- renderer picker -------------------------------------------------------
-for (const r of renderers) {
-  const opt = document.createElement('option');
-  opt.value = r.id;
-  opt.textContent = r.name;
-  els.renderer.appendChild(opt);
+// --- renderer picker (tab buttons: Sheets | Cards) -------------------------
+function buildRendererTabs() {
+  if (!byId[settings.renderer]) settings.renderer = defaultRenderer.id;
+  els.rendererTabs.innerHTML = '';
+  for (const r of renderers) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab' + (r.id === settings.renderer ? ' active' : '');
+    b.textContent = r.name;
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', r.id === settings.renderer ? 'true' : 'false');
+    b.addEventListener('click', () => {
+      if (settings.renderer === r.id) return;
+      settings.renderer = r.id;
+      els.rendererTabs.querySelectorAll('.tab').forEach((t, i) => {
+        const on = renderers[i].id === settings.renderer;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      buildOptions();
+      saveSettings();
+      regenerate();
+    });
+    els.rendererTabs.appendChild(b);
+  }
 }
-els.renderer.value = byId[settings.renderer] ? settings.renderer : defaultRenderer.id;
-els.renderer.addEventListener('change', () => {
-  settings.renderer = els.renderer.value;
-  buildOptions();
-  saveSettings();
-  regenerate();
-});
 
 // --- options UI (from the renderer's schema, values persisted) -------------
 
@@ -211,7 +223,7 @@ function infoIcon(text) {
 }
 
 function buildOptions() {
-  const r = byId[els.renderer.value] || defaultRenderer;
+  const r = byId[settings.renderer] || defaultRenderer;
   els.options.innerHTML = '';
   for (const opt of r.options || []) {
     let val = settings.options[opt.key];
@@ -434,7 +446,7 @@ function initEngine() {
 // worker. previewToken supersedes stale single-preview renders.
 function regenerate() {
   if (!army || !ready) return;
-  currentRenderer = byId[els.renderer.value] || defaultRenderer;
+  currentRenderer = byId[settings.renderer] || defaultRenderer;
   currentOptions = { ...settings.options };
   invalidatePdf();
   const token = ++previewToken;
@@ -611,6 +623,7 @@ function slug(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-// Build the (hidden) option controls up front so they're ready when the first
-// army is shown. The engine itself loads lazily on the first showArmy().
+// Build the renderer tabs + (hidden) option controls up front so they're ready
+// when the first army is shown. The engine itself loads lazily on first showArmy().
+buildRendererTabs();
 buildOptions();

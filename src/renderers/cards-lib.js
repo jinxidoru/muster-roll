@@ -5,6 +5,7 @@
 
 import {
   clean, formatKeywords, ts, mk, statVal, armyRules,
+  armyStratagems, stratagemSteps, stratagemTitle,
   splitProfiles, rosterGroups, subsetKeywords, datasheetGroups, resolveAccent,
 } from './shared.js';
 
@@ -269,6 +270,21 @@ export function preamble(accent, titlefont = 'Anton') {
 // An enhancement paragraph — same text color as abilities; the "Enhancements"
 // section label above it (accent) is what sets it apart.
 #let enh(name, body) = block(width: 100%, inset: (y: 1pt), text(size: 6.6pt)[#text(weight: "bold", name)#if body != "" [ — #body]])
+
+// A stratagem block: the name/phase title with the CP cost right-justified, then
+// each WHEN/TARGET/EFFECT step as a hanging-indent bullet. steps: ((label, body)…).
+#let strat(title, cp, steps) = block(width: 100%, inset: (y: 2pt), breakable: false, {
+  grid(columns: (1fr, auto), column-gutter: 4pt, align: (left + bottom, right + bottom),
+    text(weight: "bold", size: 6.6pt, title),
+    text(weight: "bold", size: 6.6pt, fill: accent, cp))
+  v(1.5pt)
+  for st in steps {
+    grid(columns: (auto, 1fr), column-gutter: 3pt, align: top,
+      text(size: 6pt, fill: accent)[•],
+      text(size: 6pt)[#(if st.at(0) != "" { strong(st.at(0) + ": ") })#st.at(1)])
+    v(0.8pt)
+  }
+})
 
 // --- packer ----------------------------------------------------------------
 // Split \`blocks\` across as many cards as needed so nothing overflows, drawing
@@ -707,6 +723,34 @@ export function rulesCardDoc(army, sizeKey, accentHex, opts = {}) {
 `;
 }
 
+// A Typst dict for the stratagems card: each stratagem as a `strat(...)` block
+// (title + right-justified CP + bulleted WHEN/TARGET/EFFECT steps). Detachment
+// stratagems, plus the universal Core stratagems when opts.core is set.
+function stratDict(army, opts = {}) {
+  const list = armyStratagems(army, { detachment: opts.detachment !== false, core: !!opts.core });
+  const blocks = list.map((s) => {
+    const steps = stratagemSteps(s.text).map((st) => `(${ts(st.label)}, ${ts(clean(st.body))})`);
+    return `strat(${ts(stratagemTitle(s))}, ${ts(`${s.cp}CP`)}, ${arrayLit(steps)})`;
+  });
+  return `(title: ${ts('Stratagems')}, blocks: ${arrayLit(blocks)})`;
+}
+
+// Whether there are any stratagems to show on a card for these options.
+export function stratagemsCardHasContent(army, opts = {}) {
+  return armyStratagems(army, { detachment: opts.detachment !== false, core: !!opts.core }).length > 0;
+}
+
+// Standalone preview doc for the stratagems card(s), stacked (portrait, rounded).
+export function stratagemsCardDoc(army, sizeKey, accentHex, opts = {}) {
+  const { w, h } = CARD_SIZES[sizeKey] || CARD_SIZES.standard;
+  return `${preamble(accentHex, 'Anton')}
+#set page(width: ${w + 8}mm, height: auto, margin: 4mm)
+#context {
+  stack(dir: ttb, spacing: 4mm, ..makerulescards(${stratDict(army, opts)}, ${w}mm, ${h}mm, round: true))
+}
+`;
+}
+
 // Selected units' cards imposed onto the print sheet: uniform butt-cut grid,
 // centered, with short cut ticks in the outer margins at each gridline.
 export function imposeDoc(views, sizeKey, paperKey, accentHex, opts = {}) {
@@ -731,6 +775,13 @@ export function imposeDoc(views, sizeKey, paperKey, accentHex, opts = {}) {
   const rulesLit = includeRules
     ? `makerulescards(${rulesDict(opts.army, { enhancements: !!opts.rulesEnhancements })}, cw, ch, round: false)`
     : '()';
+  // Stratagems card(s) — portrait, tile directly like the unit cards.
+  const stratOpts = opts.stratOpts || {};
+  const includeStrat = opts.includeStratagems && opts.army &&
+    stratagemsCardHasContent(opts.army, stratOpts);
+  const stratLit = includeStrat
+    ? `makerulescards(${stratDict(opts.army, stratOpts)}, cw, ch, round: false)`
+    : '()';
   return `${preamble(accentHex, 'Anton')}
 #set page(width: ${pw}mm, height: ${ph}mm, margin: 0pt)
 #context {
@@ -744,6 +795,7 @@ export function imposeDoc(views, sizeKey, paperKey, accentHex, opts = {}) {
   let summary = (${summaryLit}).map(c => rotate(90deg, reflow: true, c))
   for _c in range(${copies}) { all = all + summary }
   all = all + ${rulesLit}
+  all = all + ${stratLit}
   for u in ${units} { all = all + makecards(u, cw, ch, round: false, invBottom: ${inv}) }
   let cols = calc.max(1, calc.floor(${pw}mm / cw))
   let rows = calc.max(1, calc.floor(${ph}mm / ch))

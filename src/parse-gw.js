@@ -290,6 +290,7 @@ export function buildArmyFromGw(parsed, db, opts = {}) {
     enhancements: usedEnhancements,
     enhancementPool: [],
     stratagems,
+    coreStratagems: db.coreStratagems(),
     glossary: {},
     coreGlossary: opts.coreGlossary || {},
     warnings,

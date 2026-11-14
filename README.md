@@ -46,13 +46,15 @@ every saved list current. New Recruit lists don't need it.
 
 Sheets are produced by named *renderers*, each with its own layout and options:
 
-- **Standard** — the whole army as dense reference tables on US Letter or A4, with
+- **Sheets** — the whole army as dense reference tables on US Letter or A4, with
   optional sections for army & detachment rules, enhancements, stratagems (name + CP
-  with bulleted WHEN/TARGET/EFFECT steps), and a keyword glossary, plus a page-breaks
-  option that splits units / rules / glossary onto separate pages.
-- **Cards** — one printable card per unit (Magic/Poker or Tarot size). The preview
-  shows individual cards with a checkbox each; the PDF imposes the selected cards onto
-  the page (US Letter / A4) in a butt-cut grid with margin cut ticks. Titles use the
+  with bulleted WHEN/TARGET/EFFECT steps, plus the universal Core stratagems if you
+  want them), and a keyword glossary, plus a page-breaks option that splits units /
+  rules / glossary onto separate pages. (CLI id: `standard`.)
+- **Cards** — one printable card per unit (Magic/Poker or Tarot size), plus optional
+  army-summary, army-rules, and stratagem cards. The preview shows individual cards
+  with a checkbox each; the PDF imposes the selected cards onto the page (US Letter /
+  A4) in a butt-cut grid with margin cut ticks. Titles use the
   [Anton](https://fonts.google.com/specimen/Anton) font (SIL Open Font License).
 
 More styles can be added without touching the rest.

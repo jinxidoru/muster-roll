@@ -8,6 +8,7 @@ import {
   CARD_SIZES, resolveAccent, cardGroups, groupView,
   previewUnitDoc, imposeDoc, unitList, summaryCardDoc,
   rulesCardDoc, rulesCardHasContent,
+  stratagemsCardDoc, stratagemsCardHasContent,
 } from './cards-lib.js';
 
 const sizeChoices = Object.entries(CARD_SIZES).map(([value, s]) => ({ value, label: s.label }));
@@ -66,6 +67,13 @@ export default {
       help: 'On: show each enhancement on its unit’s card. Off (default): list them on the army rules card instead, under a clearly labelled “Enhancements” section.',
     },
     {
+      key: 'showCoreStratagems',
+      label: 'Include core stratagems',
+      type: 'bool',
+      default: false,
+      help: 'Add the universal Core stratagems (Command Re-roll, Go to Ground, Tank Shock, Grenade, …) to the stratagems card(s), alongside the detachment stratagems.',
+    },
+    {
       key: 'accent',
       label: 'Color',
       type: 'color',
@@ -103,6 +111,14 @@ export default {
           { withEnh: enhOnRulesCard(options) }),
       });
     }
+    const stratOpts = { core: coreStratagems(options) };
+    if (stratagemsCardHasContent(army, stratOpts)) {
+      cards.push({
+        key: 'stratagems',
+        name: 'Stratagems',
+        doc: stratagemsCardDoc(army, options.cardSize, resolveAccent(options, army), stratOpts),
+      });
+    }
     return cards;
   },
 
@@ -135,9 +151,11 @@ export default {
       });
 
     const rulesShown = rulesCardShown(army, options);
+    const stratOpts = { core: coreStratagems(options) };
+    const stratShown = stratagemsCardHasContent(army, stratOpts);
     const auxSel = Array.isArray(options.auxSelected)
       ? new Set(options.auxSelected)
-      : new Set(['summary', ...(rulesShown ? ['rules'] : [])]); // default: all shown aux cards
+      : new Set(['summary', ...(rulesShown ? ['rules'] : []), ...(stratShown ? ['stratagems'] : [])]);
     const summaryCopies = auxSel.has('summary') ? (options.opponentCopy ? 2 : 1) : 0;
 
     return imposeDoc(views, options.cardSize, options.cardPaper, resolveAccent(options, army), {
@@ -145,11 +163,18 @@ export default {
       summaryCopies,
       includeRules: rulesShown && auxSel.has('rules'),
       rulesEnhancements: enhOnRules,
+      includeStratagems: stratShown && auxSel.has('stratagems'),
+      stratOpts,
       showPoints: !!options.summaryPoints,
       invBottom: !!options.invAtBottom,
     });
   },
 };
+
+// Whether to fold the universal Core stratagems onto the stratagems card(s).
+function coreStratagems(options) {
+  return bool(options.showCoreStratagems, false);
+}
 
 // Enhancements go on the rules card (not the unit cards) unless "with unit" is on.
 function enhOnRulesCard(options) {

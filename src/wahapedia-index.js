@@ -283,6 +283,26 @@ export function buildWahapediaDB(files) {
       .map((e) => ({ name: e.name, points: Number(e.cost) || 0, text: htmlToText(e.description) }));
   }
 
+  // The universal Core stratagems (available to every army regardless of
+  // detachment): Command Re-roll, Go to Ground, Tank Shock, Grenade, etc. These
+  // carry a `type` of the form "Core – <subcategory> Stratagem" (en-dash). The
+  // bare "Core Stratagem" type is the separate Combat Patrol game mode — excluded.
+  function coreStratagems() {
+    const seen = new Set();
+    const out = [];
+    for (const s of stratagems) {
+      if (!/^core\s*[–-]/i.test(s.type || '')) continue;
+      const k = normName(s.name);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({
+        name: s.name, cp: Number(s.cp_cost) || 0, type: s.type,
+        turn: s.turn, phase: s.phase, text: htmlToText(s.description),
+      });
+    }
+    return out;
+  }
+
   function detachmentRules(detachment) {
     const nd = normName(detachment);
     if (!nd) return [];
@@ -295,6 +315,7 @@ export function buildWahapediaDB(files) {
     factionNameById, factionIdByName,
     findDatasheet, unitFromRef,
     stratagemsForDetachment, enhancementsForDetachment, detachmentRules, resolveEnhancement,
+    coreStratagems,
     counts: { datasheets: datasheets.length, factions: factions.length },
   };
 }

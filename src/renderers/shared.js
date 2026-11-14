@@ -185,6 +185,41 @@ export function datasheetGroups(units) {
   return order;
 }
 
+// The army's stratagems to show, per options: detachment stratagems and/or the
+// universal Core stratagems (army.coreStratagems). De-duplicated by name so a
+// stratagem that is both never doubles. Detachment ones come first.
+export function armyStratagems(army, { detachment = true, core = false } = {}) {
+  const out = [];
+  const seen = new Set();
+  const add = (s) => { const k = String(s.name).toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(s); } };
+  if (detachment) for (const s of army.stratagems || []) add(s);
+  if (core) for (const s of army.coreStratagems || []) add(s);
+  return out;
+}
+
+// Split a stratagem's body into labeled steps. A line beginning with an
+// ALL-CAPS label + colon (WHEN: / TARGET: / EFFECT: / RESTRICTIONS: …) starts a
+// new step; following unlabeled lines continue it. Returns [{ label, body }]
+// (label '' for any leading unlabeled text). Shared by both renderers.
+export function stratagemSteps(text) {
+  const steps = [];
+  let cur = null;
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = /^([A-Z][A-Z0-9'’/ -]{1,22}):\s*(.*)$/.exec(line);
+    if (m) { cur = { label: m[1].trim(), body: m[2].trim() }; steps.push(cur); }
+    else if (cur) { cur.body += (cur.body ? ' ' : '') + line; }
+    else { cur = { label: '', body: line }; steps.push(cur); }
+  }
+  return steps;
+}
+
+// A stratagem's title line text: "Name (Phase)" or just "Name".
+export function stratagemTitle(s) {
+  return s.phase ? `${s.name} (${s.phase})` : s.name;
+}
+
 // Army-wide + detachment rules for the whole army, de-duplicated by name.
 // parse.js attaches the collected rules to the first unit; older/other shapes
 // may spread them across units, so scan them all. Returns [{ name, text }].
