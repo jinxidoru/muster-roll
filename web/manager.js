@@ -8,9 +8,7 @@ import { armyStore } from './storage.js';
 import { detectSource, summaryFromSource } from './build-army.js';
 import { goArmy } from './router.js';
 import { getDB, invalidateDB } from './data.js';
-import {
-  isDevHost, remoteBase, setRemoteBase, getMeta, isCached, syncWahapedia,
-} from './wahapedia-store.js';
+import { isDevHost, getMeta, isCached, syncWahapedia } from './wahapedia-store.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -21,7 +19,6 @@ function cache() {
     pasteText: $('paste-text'), pasteAdd: $('paste-add'),
     list: $('army-list'), empty: $('army-empty'),
     waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'),
-    waConfig: $('wahapedia-config'), waBase: $('wahapedia-base'), waBaseSave: $('wahapedia-base-save'),
   };
 }
 
@@ -53,11 +50,6 @@ export function initManager() {
 
   // --- Wahapedia controls -------------------------------------------------
   els.waSync.addEventListener('click', doSync);
-  els.waBaseSave.addEventListener('click', () => {
-    setRemoteBase(els.waBase.value.trim());
-    refreshWahapedia();
-  });
-
   refreshWahapedia();
 }
 
@@ -167,10 +159,6 @@ function iconBtn(label, kind) {
 // --- Wahapedia data panel ---------------------------------------------------
 async function refreshWahapedia() {
   const dev = isDevHost();
-  const needsConfig = !dev && !remoteBase();
-  els.waConfig.hidden = !needsConfig;
-  if (needsConfig) els.waBase.value = remoteBase();
-
   const cached = await isCached();
   const meta = await getMeta();
   if (cached && meta) {
@@ -179,9 +167,7 @@ async function refreshWahapedia() {
       `<br /><span class="hint">Synced ${fmtDate(meta.syncedAt)}${dev ? ' · dev (local files)' : ''}</span>`;
     els.waSync.textContent = 'Refresh';
   } else {
-    els.waStatus.innerHTML = needsConfig
-      ? 'Not loaded. GW app lists need Wahapedia datasheet data — set a pass-through below, then load.'
-      : 'Not loaded. GW app lists need Wahapedia datasheet data to fill in stats.';
+    els.waStatus.innerHTML = 'Not loaded. GW app lists need Wahapedia datasheet data to fill in stats.';
     els.waSync.textContent = 'Load data';
   }
 }
@@ -201,8 +187,7 @@ async function doSync() {
     els.waStatus.textContent = res.updated ? 'Updated.' : 'Already up to date.';
   } catch (err) {
     els.waStatus.innerHTML = `<span class="err">Sync failed: ${err.message}</span>` +
-      (isDevHost() ? '' : '<br /><span class="hint">A browser can\'t fetch wahapedia.ru directly (no CORS). Set a pass-through base URL below.</span>');
-    els.waConfig.hidden = false;
+      (isDevHost() ? '' : '<br /><span class="hint">The datasheet-data service isn’t reachable right now.</span>');
   } finally {
     els.waSync.disabled = false;
     await refreshWahapedia();

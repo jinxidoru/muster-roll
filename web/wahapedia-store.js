@@ -38,7 +38,11 @@ function db() {
 }
 
 // --- source base URL --------------------------------------------------------
-const REMOTE_BASE_KEY = '40k-roster-pdf/wahapedia-base';
+// Production pass-through base URL. A browser can't fetch wahapedia.ru directly
+// (no CORS headers), so production fetches go through a pass-through we stand up
+// and set here internally (see README). Empty until configured — while empty,
+// prod falls back to the direct base and sync surfaces a clear CORS error.
+const PASS_THROUGH_BASE = '';
 
 export function isDevHost() {
   const h = location.hostname;
@@ -50,22 +54,11 @@ export function isDevHost() {
   );
 }
 
-// The user's configured pass-through base, or '' if unset.
-export function remoteBase() {
-  try { return localStorage.getItem(REMOTE_BASE_KEY) || ''; } catch { return ''; }
-}
-export function setRemoteBase(url) {
-  try {
-    if (url) localStorage.setItem(REMOTE_BASE_KEY, url.replace(/\/+$/, ''));
-    else localStorage.removeItem(REMOTE_BASE_KEY);
-  } catch { /* ignore */ }
-}
-
-// Where CSVs are fetched from this run. Dev: local files. Prod: the configured
-// pass-through (falls back to the documented direct base, which CORS blocks).
+// Where CSVs are fetched from this run. Dev: the local files the fetch script
+// wrote under data/wahapedia/. Prod: the internal pass-through base.
 export function sourceBase() {
   if (isDevHost()) return new URL('data/wahapedia', document.baseURI).href;
-  return remoteBase() || WAHAPEDIA_BASE;
+  return PASS_THROUGH_BASE || WAHAPEDIA_BASE;
 }
 
 async function fetchCsv(base, name) {
