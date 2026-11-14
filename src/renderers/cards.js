@@ -8,7 +8,7 @@ import {
   CARD_SIZES, resolveAccent, cardGroups, groupView,
   previewUnitDoc, imposeDoc, unitList, summaryCardDoc,
   rulesCardDoc, rulesCardHasContent,
-  stratagemsCardDoc, stratagemsCardHasContent,
+  stratagemsCardDoc,
 } from './cards-lib.js';
 
 const sizeChoices = Object.entries(CARD_SIZES).map(([value, s]) => ({ value, label: s.label }));
@@ -111,12 +111,21 @@ export default {
           { withEnh: enhOnRulesCard(options) }),
       });
     }
-    const stratOpts = { core: coreStratagems(options) };
-    if (stratagemsCardHasContent(army, stratOpts)) {
+    // Stratagem cards go at the END of the collection (atEnd), and the
+    // detachment stratagems and Core stratagems are kept on separate cards.
+    const accent = resolveAccent(options, army);
+    const det = army.stratagems || [];
+    if (det.length) {
       cards.push({
-        key: 'stratagems',
-        name: 'Stratagems',
-        doc: stratagemsCardDoc(army, options.cardSize, resolveAccent(options, army), stratOpts),
+        key: 'stratagems', name: 'Stratagems', atEnd: true,
+        doc: stratagemsCardDoc(det, 'Stratagems', options.cardSize, accent),
+      });
+    }
+    const core = army.coreStratagems || [];
+    if (coreStratagems(options) && core.length) {
+      cards.push({
+        key: 'core-stratagems', name: 'Core Stratagems', atEnd: true,
+        doc: stratagemsCardDoc(core, 'Core Stratagems', options.cardSize, accent),
       });
     }
     return cards;
@@ -151,20 +160,29 @@ export default {
       });
 
     const rulesShown = rulesCardShown(army, options);
-    const stratOpts = { core: coreStratagems(options) };
-    const stratShown = stratagemsCardHasContent(army, stratOpts);
+    const det = army.stratagems || [];
+    const core = coreStratagems(options) ? (army.coreStratagems || []) : [];
     const auxSel = Array.isArray(options.auxSelected)
       ? new Set(options.auxSelected)
-      : new Set(['summary', ...(rulesShown ? ['rules'] : []), ...(stratShown ? ['stratagems'] : [])]);
+      : new Set([
+          'summary',
+          ...(rulesShown ? ['rules'] : []),
+          ...(det.length ? ['stratagems'] : []),
+          ...(core.length ? ['core-stratagems'] : []),
+        ]);
     const summaryCopies = auxSel.has('summary') ? (options.opponentCopy ? 2 : 1) : 0;
+
+    // Stratagem groups to impose (after the units), each kept on its own cards.
+    const stratagemGroups = [];
+    if (det.length && auxSel.has('stratagems')) stratagemGroups.push({ list: det, title: 'Stratagems' });
+    if (core.length && auxSel.has('core-stratagems')) stratagemGroups.push({ list: core, title: 'Core Stratagems' });
 
     return imposeDoc(views, options.cardSize, options.cardPaper, resolveAccent(options, army), {
       army,
       summaryCopies,
       includeRules: rulesShown && auxSel.has('rules'),
       rulesEnhancements: enhOnRules,
-      includeStratagems: stratShown && auxSel.has('stratagems'),
-      stratOpts,
+      stratagemGroups,
       showPoints: !!options.summaryPoints,
       invBottom: !!options.invAtBottom,
     });

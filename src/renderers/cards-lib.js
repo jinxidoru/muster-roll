@@ -5,7 +5,7 @@
 
 import {
   clean, formatKeywords, ts, mk, statVal, armyRules,
-  armyStratagems, stratagemSteps, stratagemTitle,
+  stratagemSteps, stratagemTitle,
   splitProfiles, rosterGroups, subsetKeywords, datasheetGroups, resolveAccent,
 } from './shared.js';
 
@@ -723,30 +723,26 @@ export function rulesCardDoc(army, sizeKey, accentHex, opts = {}) {
 `;
 }
 
-// A Typst dict for the stratagems card: each stratagem as a `strat(...)` block
-// (title + right-justified CP + bulleted WHEN/TARGET/EFFECT steps). Detachment
-// stratagems, plus the universal Core stratagems when opts.core is set.
-function stratDict(army, opts = {}) {
-  const list = armyStratagems(army, { detachment: opts.detachment !== false, core: !!opts.core });
-  const blocks = list.map((s) => {
+// A Typst dict for a stratagems card group: each stratagem as a `strat(...)`
+// block (title + right-justified CP + bulleted WHEN/TARGET/EFFECT steps). One
+// group (e.g. the detachment's stratagems, or the Core stratagems) per dict, so
+// the two never share a card — the title bar marks which group it is.
+function stratDict(list, title) {
+  const blocks = (list || []).map((s) => {
     const steps = stratagemSteps(s.text).map((st) => `(${ts(st.label)}, ${ts(clean(st.body))})`);
     return `strat(${ts(stratagemTitle(s))}, ${ts(`${s.cp}CP`)}, ${arrayLit(steps)})`;
   });
-  return `(title: ${ts('Stratagems')}, blocks: ${arrayLit(blocks)})`;
+  return `(title: ${ts(title)}, blocks: ${arrayLit(blocks)})`;
 }
 
-// Whether there are any stratagems to show on a card for these options.
-export function stratagemsCardHasContent(army, opts = {}) {
-  return armyStratagems(army, { detachment: opts.detachment !== false, core: !!opts.core }).length > 0;
-}
-
-// Standalone preview doc for the stratagems card(s), stacked (portrait, rounded).
-export function stratagemsCardDoc(army, sizeKey, accentHex, opts = {}) {
+// Standalone preview doc for one stratagems group's card(s), stacked (portrait,
+// rounded). `list` is the group's stratagems; `title` marks the group.
+export function stratagemsCardDoc(list, title, sizeKey, accentHex) {
   const { w, h } = CARD_SIZES[sizeKey] || CARD_SIZES.standard;
   return `${preamble(accentHex, 'Anton')}
 #set page(width: ${w + 8}mm, height: auto, margin: 4mm)
 #context {
-  stack(dir: ttb, spacing: 4mm, ..makerulescards(${stratDict(army, opts)}, ${w}mm, ${h}mm, round: true))
+  stack(dir: ttb, spacing: 4mm, ..makerulescards(${stratDict(list, title)}, ${w}mm, ${h}mm, round: true))
 }
 `;
 }
@@ -775,13 +771,12 @@ export function imposeDoc(views, sizeKey, paperKey, accentHex, opts = {}) {
   const rulesLit = includeRules
     ? `makerulescards(${rulesDict(opts.army, { enhancements: !!opts.rulesEnhancements })}, cw, ch, round: false)`
     : '()';
-  // Stratagems card(s) — portrait, tile directly like the unit cards.
-  const stratOpts = opts.stratOpts || {};
-  const includeStrat = opts.includeStratagems && opts.army &&
-    stratagemsCardHasContent(opts.army, stratOpts);
-  const stratLit = includeStrat
-    ? `makerulescards(${stratDict(opts.army, stratOpts)}, cw, ch, round: false)`
-    : '()';
+  // Stratagem card groups (detachment, core) — portrait, tile like the unit
+  // cards, placed AFTER the units. Each group is its own set of cards; groups
+  // never share a card.
+  const stratGroups = (Array.isArray(opts.stratagemGroups) ? opts.stratagemGroups : [])
+    .filter((g) => g && g.list && g.list.length);
+  const stratLits = stratGroups.map((g) => `makerulescards(${stratDict(g.list, g.title)}, cw, ch, round: false)`);
   return `${preamble(accentHex, 'Anton')}
 #set page(width: ${pw}mm, height: ${ph}mm, margin: 0pt)
 #context {
@@ -795,8 +790,8 @@ export function imposeDoc(views, sizeKey, paperKey, accentHex, opts = {}) {
   let summary = (${summaryLit}).map(c => rotate(90deg, reflow: true, c))
   for _c in range(${copies}) { all = all + summary }
   all = all + ${rulesLit}
-  all = all + ${stratLit}
   for u in ${units} { all = all + makecards(u, cw, ch, round: false, invBottom: ${inv}) }
+  ${stratLits.map((l) => `all = all + ${l}`).join('\n  ')}
   let cols = calc.max(1, calc.floor(${pw}mm / cw))
   let rows = calc.max(1, calc.floor(${ph}mm / ch))
   let per = cols * rows

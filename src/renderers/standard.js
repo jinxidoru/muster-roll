@@ -4,7 +4,7 @@
 import {
   clean, formatKeywords, ts, mk, statVal, bool, armyRules,
   splitProfiles, rosterGroups, subsetKeywords, datasheetGroups, resolveAccent,
-  armyStratagems, stratagemSteps, stratagemTitle,
+  stratagemSteps, stratagemTitle,
 } from './shared.js';
 
 // Typst preamble (page/style + helper functions). `accent` is the faction color,
@@ -410,7 +410,7 @@ function render(army, options = {}) {
   // page-breaks option is on, this whole group starts on a fresh page.
   const rules = armyRules(army);
   const enhancements = enhWithUnit ? [] : army.enhancements;
-  const stratagems = armyStratagems(army, { detachment: opts.showStratagems, core: opts.showCoreStratagems });
+  const stratagems = opts.showStratagems ? (army.stratagems || []) : [];
   const hasRulesGroup = rules.length || enhancements.length || stratagems.length;
 
   if (hasRulesGroup && opts.pageBreaks) doc += `#pagebreak()\n`;
@@ -485,6 +485,15 @@ function render(army, options = {}) {
         doc += `#text(size: 6.4pt, fill: luma(150), style: "italic")[${undefinedCount} other referenced keyword${undefinedCount === 1 ? '' : 's'} ${undefinedCount === 1 ? 'has' : 'have'} no definition available.]\n\n`;
       }
     }
+  }
+
+  // Core stratagems: the universal ones, as their own section at the very end
+  // (opt-in, off by default). Kept separate from the detachment's stratagems.
+  const coreStrats = opts.showCoreStratagems ? (army.coreStratagems || []) : [];
+  if (coreStrats.length) {
+    if (opts.pageBreaks) doc += `#pagebreak()\n`;
+    doc += `#section("Core Stratagems")\n`;
+    doc += sectionList(coreStrats.map(stratagemStepItem), opts.detailsTwoColumn);
   }
 
   return doc;
@@ -569,7 +578,7 @@ export default {
       label: 'Include core stratagems',
       type: 'bool',
       default: false,
-      help: 'Also include the universal Core stratagems (Command Re-roll, Go to Ground, Tank Shock, Grenade, …) that every army can use, alongside the detachment stratagems.',
+      help: 'Add the universal Core stratagems (Command Re-roll, Go to Ground, Tank Shock, Grenade, …) as their own section at the end of the sheet. Off by default.',
     },
     {
       key: 'showGlossary',

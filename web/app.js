@@ -485,67 +485,75 @@ function renderCards(token) {
   els.download.hidden = false;
   els.print.hidden = false;
   setStatus('');
-  // Aux cards (army summary, army rules) at the top, each with a checkbox like
-  // the unit cards.
-  for (const { key, name, doc, wide } of auxCards()) {
-    if (!doc) continue;
-    const item = document.createElement('div');
-    item.className = wide ? 'card-item summary' : 'card-item'; // .summary = wider landscape cell
-    const label = document.createElement('label');
-    label.className = 'card-check';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = !auxDeselected.has(key);
-    cb.dataset.aux = key;
-    const nm = document.createElement('span');
-    nm.className = 'card-name';
-    nm.textContent = name;
-    label.append(cb, nm);
-    const out = document.createElement('div');
-    out.className = 'card-out';
-    out.textContent = '…';
-    item.append(label, out);
+  const aux = auxCards();
+  // Top aux cards (army summary, army rules), then the unit cards, then any
+  // trailing aux cards (stratagems) at the END of the collection.
+  for (const c of aux) if (!c.atEnd) appendAuxCard(c, token);
+  for (const u of units) appendUnitCard(u, token);
+  for (const c of aux) if (c.atEnd) appendAuxCard(c, token);
+}
+
+// A selectable preview cell for an aux card (summary / rules / stratagems).
+function appendAuxCard({ key, name, doc, wide }, token) {
+  if (!doc) return;
+  const item = document.createElement('div');
+  item.className = wide ? 'card-item summary' : 'card-item'; // .summary = wider landscape cell
+  const label = document.createElement('label');
+  label.className = 'card-check';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = !auxDeselected.has(key);
+  cb.dataset.aux = key;
+  const nm = document.createElement('span');
+  nm.className = 'card-name';
+  nm.textContent = name;
+  label.append(cb, nm);
+  const out = document.createElement('div');
+  out.className = 'card-out';
+  out.textContent = '…';
+  item.append(label, out);
+  item.classList.toggle('unchecked', !cb.checked);
+  els.viewer.appendChild(item);
+  cb.addEventListener('change', () => {
+    if (cb.checked) auxDeselected.delete(key); else auxDeselected.add(key);
     item.classList.toggle('unchecked', !cb.checked);
-    els.viewer.appendChild(item);
-    cb.addEventListener('change', () => {
-      if (cb.checked) auxDeselected.delete(key); else auxDeselected.add(key);
-      item.classList.toggle('unchecked', !cb.checked);
-      syncSelectAllLabel();
-      invalidatePdf();
-    });
-    renderSvg(doc)
-      .then((svg) => { if (token === previewToken) out.innerHTML = svg; })
-      .catch((err) => { out.innerHTML = `<pre class="err">${err.message || err}</pre>`; });
-  }
-  for (const { index, name } of units) {
-    const item = document.createElement('div');
-    item.className = 'card-item';
-    const label = document.createElement('label');
-    label.className = 'card-check';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = cardSelection.has(index);
-    cb.dataset.idx = String(index);
-    const nm = document.createElement('span');
-    nm.className = 'card-name';
-    nm.textContent = name;
-    label.append(cb, nm);
-    const out = document.createElement('div');
-    out.className = 'card-out';
-    out.textContent = '…';
-    item.append(label, out);
+    syncSelectAllLabel();
+    invalidatePdf();
+  });
+  renderSvg(doc)
+    .then((svg) => { if (token === previewToken) out.innerHTML = svg; })
+    .catch((err) => { out.innerHTML = `<pre class="err">${err.message || err}</pre>`; });
+}
+
+// A selectable preview cell for one unit (datasheet group).
+function appendUnitCard({ index, name }, token) {
+  const item = document.createElement('div');
+  item.className = 'card-item';
+  const label = document.createElement('label');
+  label.className = 'card-check';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = cardSelection.has(index);
+  cb.dataset.idx = String(index);
+  const nm = document.createElement('span');
+  nm.className = 'card-name';
+  nm.textContent = name;
+  label.append(cb, nm);
+  const out = document.createElement('div');
+  out.className = 'card-out';
+  out.textContent = '…';
+  item.append(label, out);
+  item.classList.toggle('unchecked', !cb.checked);
+  els.viewer.appendChild(item);
+  cb.addEventListener('change', () => {
+    if (cb.checked) cardSelection.add(index); else cardSelection.delete(index);
     item.classList.toggle('unchecked', !cb.checked);
-    els.viewer.appendChild(item);
-    cb.addEventListener('change', () => {
-      if (cb.checked) cardSelection.add(index); else cardSelection.delete(index);
-      item.classList.toggle('unchecked', !cb.checked);
-      syncSelectAllLabel();
-      invalidatePdf();
-    });
-    renderSvg(currentRenderer.previewUnit(army, index, currentOptions))
-      .then((svg) => { if (token === previewToken) out.innerHTML = svg; })
-      .catch((err) => { out.innerHTML = `<pre class="err">${err.message || err}</pre>`; });
-  }
+    syncSelectAllLabel();
+    invalidatePdf();
+  });
+  renderSvg(currentRenderer.previewUnit(army, index, currentOptions))
+    .then((svg) => { if (token === previewToken) out.innerHTML = svg; })
+    .catch((err) => { out.innerHTML = `<pre class="err">${err.message || err}</pre>`; });
 }
 
 function syncSelectAllLabel() {
