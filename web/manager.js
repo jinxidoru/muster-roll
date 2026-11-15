@@ -8,7 +8,7 @@ import { armyStore } from './storage.js';
 import { detectSource, summaryFromSource } from './build-army.js';
 import { goArmy } from './router.js';
 import { getDB, invalidateDB } from './data.js';
-import { isDevHost, getMeta, isCached, syncWahapedia } from './wahapedia-store.js';
+import { isDevHost, getMeta, isCached, syncWahapedia, clearWahapedia } from './wahapedia-store.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,7 +18,7 @@ function cache() {
     drop: $('drop'), file: $('file'), pick: $('pick'), uploadStatus: $('upload-status'),
     pasteText: $('paste-text'), pasteAdd: $('paste-add'),
     list: $('army-list'), empty: $('army-empty'),
-    waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'),
+    waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'), waUnload: $('wahapedia-unload'),
   };
 }
 
@@ -50,6 +50,13 @@ export function initManager() {
 
   // --- Wahapedia controls -------------------------------------------------
   els.waSync.addEventListener('click', doSync);
+  // Dev-only: clear the cached Wahapedia data so the auto-load flow can be tested.
+  els.waUnload.hidden = !isDevHost();
+  els.waUnload.addEventListener('click', async () => {
+    await clearWahapedia();
+    invalidateDB();
+    await refreshWahapedia();
+  });
   refreshWahapedia();
 }
 
