@@ -39,10 +39,9 @@ function db() {
 
 // --- source base URL --------------------------------------------------------
 // Production pass-through base URL. A browser can't fetch wahapedia.ru directly
-// (no CORS headers), so production fetches go through a pass-through we stand up
-// and set here internally (see README). Empty until configured — while empty,
-// prod falls back to the direct base and sync surfaces a clear CORS error.
-const PASS_THROUGH_BASE = '';
+// (no CORS headers), so production fetches go through this pass-through — a
+// Cloudflare Worker that forwards /wh40k11ed/*.csv with CORS + an edge cache.
+const PASS_THROUGH_BASE = 'https://muster-roll-data.jinxidoru.workers.dev/wh40k11ed';
 
 export function isDevHost() {
   const h = location.hostname;
