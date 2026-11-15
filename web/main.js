@@ -3,20 +3,18 @@
 // army model when a list is opened. The heavy typst engine loads lazily on the
 // first preview (see web/app.js).
 
-import { onRoute } from './router.js';
-import { initManager, refreshList } from './manager.js';
+import { onRoute, parseRoute } from './router.js';
+import { initManager, refreshList, showMigration, hideMigration } from './manager.js';
 import { showArmy } from './app.js';
-import { armyStore } from './storage.js';
+import { armyStore, localArmyStore, setActiveStore } from './storage.js';
 import { armyFromRecord } from './build-army.js';
 import { getDB, invalidateDB } from './data.js';
 import { syncWahapedia, isDevHost } from './wahapedia-store.js';
 
-const views = {
-  manager: document.getElementById('manager'),
-  preview: document.getElementById('preview-view'),
-};
-const appEl = document.getElementById('app');
-const loadingEl = document.getElementById('loading');
+const $ = (id) => document.getElementById(id);
+const views = { manager: $('manager'), preview: $('preview-view') };
+const appEl = $('app');
+const loadingEl = $('loading');
 
 // Bundled core-keyword definitions (shared by both formats' glossaries). Absent
 // file → stays {} and the glossary falls back to export-embedded definitions.
@@ -29,6 +27,58 @@ let coreGlossary = {};
 })();
 
 initManager();
+
+// --- auth (optional) --------------------------------------------------------
+// Firebase loads lazily; if its CDN is unreachable the app stays local-only.
+// `authReady` lets openArmy wait for the first auth result before choosing a
+// backend, so a deep link to a cloud army resolves against the right store.
+let resolveAuthReady;
+const authReady = new Promise((r) => { resolveAuthReady = r; });
+initAuth();
+
+async function initAuth() {
+  let fb;
+  try { fb = await import('./firebase.js'); }
+  catch { resolveAuthReady(); return; } // local-only
+
+  const authEl = $('auth');
+  const signInBtn = $('sign-in');
+  const signOutBtn = $('sign-out');
+  const userEl = $('auth-user');
+  const avatar = $('auth-avatar');
+  const nameEl = $('auth-name');
+  authEl.hidden = false;
+  signInBtn.addEventListener('click', () => { signInBtn.disabled = true; fb.signIn().catch(() => {}).finally(() => { signInBtn.disabled = false; }); });
+  signOutBtn.addEventListener('click', () => fb.signOutUser());
+
+  let first = true;
+  fb.onAuthChange(async (user) => {
+    setActiveStore(user ? fb.makeFirestoreStore(user.uid) : localArmyStore);
+    // top-right UI
+    signInBtn.hidden = !!user;
+    userEl.hidden = !user;
+    if (user) { avatar.src = user.photoURL || ''; nameEl.textContent = user.displayName || user.email || 'Signed in'; }
+    hideMigration();
+    if (user) await offerMigration(); // compare local vs cloud, offer to move
+    if (first) { first = false; resolveAuthReady(); }
+    if (parseRoute().view === 'manager') refreshList();
+  });
+}
+
+// After sign-in, offer to move browser-stored armies that aren't in the account
+// yet up to the cloud (moving deletes the local copy).
+async function offerMigration() {
+  let cloud;
+  try { cloud = await armyStore.list(); } catch { return; }
+  const cloudIds = new Set(cloud.map((a) => a.id));
+  const locals = (await localArmyStore.list()).filter((a) => !cloudIds.has(a.id));
+  if (!locals.length) return;
+  showMigration(locals.length, async () => {
+    for (const rec of locals) { await armyStore.put(rec); await localArmyStore.remove(rec.id); }
+    hideMigration();
+    await refreshList();
+  });
+}
 
 onRoute((route) => {
   if (route.view === 'army') openArmy(route.id);
@@ -45,6 +95,7 @@ async function openArmy(id) {
   views.manager.hidden = true;
   views.preview.hidden = false;
 
+  await authReady; // ensure the right backend (local vs cloud) is active first
   const record = await armyStore.get(id);
   if (!record) { location.hash = '#/'; return; }
 

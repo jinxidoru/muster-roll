@@ -20,6 +20,8 @@ function cache() {
     list: $('army-list'), empty: $('army-empty'), deleteAll: $('delete-all'),
     armiesHeading: $('armies-heading'),
     waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'), waUnload: $('wahapedia-unload'),
+    migrate: $('migrate-banner'), migrateText: $('migrate-text'),
+    migrateMove: $('migrate-move'), migrateDismiss: $('migrate-dismiss'),
   };
 }
 
@@ -51,6 +53,7 @@ export function initManager() {
 
   // --- Wahapedia controls -------------------------------------------------
   els.waSync.addEventListener('click', doSync);
+  els.migrateDismiss.addEventListener('click', hideMigration);
   // Dev-only: clear the cached Wahapedia data so the auto-load flow can be tested.
   els.waUnload.hidden = !isDevHost();
   els.waUnload.addEventListener('click', async () => {
@@ -160,10 +163,7 @@ function armyCard(a) {
     const name = prompt('Rename army', a.name);
     if (name && name.trim()) { await armyStore.rename(a.id, name.trim()); await refreshList(); }
   });
-  const del = iconBtn('Delete', 'delete');
-  del.addEventListener('click', async () => {
-    if (confirm(`Delete “${a.name}”? This can't be undone.`)) { await armyStore.remove(a.id); await refreshList(); }
-  });
+  const del = deleteHoldBtn(a);
   actions.append(rename, del);
 
   li.append(main, actions);
@@ -179,6 +179,51 @@ function iconBtn(label, kind) {
   b.textContent = kind === 'delete' ? '🗑' : '✎';
   return b;
 }
+
+// A press-and-hold delete for one army: a red fill rises while held and only
+// deletes once full (release early cancels) — same model as "delete all", no popup.
+function deleteHoldBtn(a) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'army-act army-act-delete hold-act';
+  b.title = `Hold to delete “${a.name}”`;
+  b.setAttribute('aria-label', b.title);
+  const fill = document.createElement('span');
+  fill.className = 'hold-act-fill';
+  fill.setAttribute('aria-hidden', 'true');
+  const icon = document.createElement('span');
+  icon.className = 'hold-act-icon';
+  icon.textContent = '🗑';
+  b.append(fill, icon);
+  const cancel = () => b.classList.remove('holding');
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.classList.add('holding'); });
+  b.addEventListener('pointerup', cancel);
+  b.addEventListener('pointerleave', cancel);
+  b.addEventListener('pointercancel', cancel);
+  b.addEventListener('transitionend', async (e) => {
+    if (e.propertyName !== 'width' || !b.classList.contains('holding')) return;
+    b.classList.remove('holding');
+    await armyStore.remove(a.id);
+    await refreshList();
+  });
+  return b;
+}
+
+// --- sign-in migration offer ------------------------------------------------
+// Shown by main.js when, after Google sign-in, there are browser-stored armies
+// not yet in the account. "Move" copies them to the cloud and deletes the local
+// copies (handled by the onMove callback main.js supplies).
+export function showMigration(count, onMove) {
+  els.migrateText.textContent =
+    `You have ${count} ${count === 1 ? 'army' : 'armies'} saved on this device. `
+    + `Move ${count === 1 ? 'it' : 'them'} to your account? (removes the local ${count === 1 ? 'copy' : 'copies'})`;
+  els.migrateMove.onclick = async () => {
+    els.migrateMove.disabled = true;
+    try { await onMove(); } finally { els.migrateMove.disabled = false; }
+  };
+  els.migrate.hidden = false;
+}
+export function hideMigration() { if (els && els.migrate) els.migrate.hidden = true; }
 
 // --- Wahapedia data panel ---------------------------------------------------
 async function refreshWahapedia() {

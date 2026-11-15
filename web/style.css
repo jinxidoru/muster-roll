@@ -21,12 +21,36 @@ a { color: var(--accent); }
   background: var(--ink);
   color: #fff;
   padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
 .topbar a { color: #fff; }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
 .brand-logo { width: 42px; height: 42px; display: block; }
 .brand h1 { margin: 0; font-size: 22px; letter-spacing: .3px; }
 .brand:hover h1 { text-decoration: underline; }
+
+/* Auth (top-right) */
+.auth { display: flex; align-items: center; gap: 10px; }
+.auth-btn {
+  font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 6px;
+  border: 1px solid #3a3a3a; background: #2a2a2a; color: #fff; cursor: pointer;
+}
+.auth-btn:hover { background: #343434; border-color: #555; }
+.auth-user { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.auth-avatar { width: 26px; height: 26px; border-radius: 50%; background: #333; }
+.auth-name { color: #fff; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-link { background: none; border: 0; color: #cfcfd4; font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+.auth-link:hover { color: #fff; }
+
+/* Sign-in migration offer */
+.migrate-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--accent); border-radius: 8px;
+  background: #fff5f6; font-size: 13.5px;
+}
+.migrate-actions { display: flex; align-items: center; gap: 12px; }
+.migrate-actions .auth-link { color: var(--muted); }
+.migrate-actions .auth-link:hover { color: var(--ink); }
 
 main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
 
@@ -181,6 +205,13 @@ select {
 .army-act:hover { background: var(--bg); color: var(--ink); }
 .army-act-delete:hover { color: var(--accent); }
 .army-act + .army-act { border-top: 1px solid var(--line); }
+
+/* Per-army delete: press-and-hold, same red fill as "delete all" (no popup).
+   The red wipes left→right; the icon lifts above it. */
+.army-act.hold-act { position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none; }
+.hold-act-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); }
+.army-act.hold-act.holding .hold-act-fill { width: 100%; transition: width 1s linear; }
+.hold-act-icon { position: relative; z-index: 1; }
 .empty-welcome { text-align: center; padding: 40px 20px; }
 .empty-logo { width: 56px; height: 56px; display: block; margin: 0 auto 14px; }
 .empty-welcome h3 { margin: 0 0 10px; font-size: 18px; }

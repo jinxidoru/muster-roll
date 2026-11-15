@@ -39,7 +39,9 @@ function uuid() {
   return 'a' + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export const armyStore = {
+// The on-device (IndexedDB) store — used when signed out, and as the local cache
+// that the cloud store can migrate from on sign-in.
+export const localArmyStore = {
   // All records, newest-updated first. Records are small (metadata + one export)
   // so loading them all is fine; a Firestore backing would page instead.
   async list() {
@@ -73,4 +75,18 @@ export const armyStore = {
     rec.name = name;
     return this.put(rec);
   },
+};
+
+// The active backend: local by default, swapped to a Firestore store (same
+// interface) while signed in. `armyStore` is a stable proxy so callers never
+// re-import — they always hit the current backend.
+let active = localArmyStore;
+export function setActiveStore(store) { active = store || localArmyStore; }
+
+export const armyStore = {
+  list: () => active.list(),
+  get: (id) => active.get(id),
+  put: (record) => active.put(record),
+  remove: (id) => active.remove(id),
+  rename: (id, name) => active.rename(id, name),
 };
