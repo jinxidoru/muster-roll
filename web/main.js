@@ -4,7 +4,7 @@
 // first preview (see web/app.js).
 
 import { onRoute, parseRoute } from './router.js';
-import { initManager, refreshList, showMigration, hideMigration } from './manager.js';
+import { initManager, refreshList, showMigration, hideMigration, showListLoading } from './manager.js';
 import { showArmy } from './app.js';
 import { armyStore, localArmyStore, setActiveStore } from './storage.js';
 import { armyFromRecord } from './build-army.js';
@@ -33,7 +33,9 @@ initManager();
 // `authReady` lets openArmy wait for the first auth result before choosing a
 // backend, so a deep link to a cloud army resolves against the right store.
 let resolveAuthReady;
+let authSettled = false;
 const authReady = new Promise((r) => { resolveAuthReady = r; });
+authReady.then(() => { authSettled = true; });
 initAuth();
 
 async function initAuth() {
@@ -88,7 +90,11 @@ onRoute((route) => {
 function showManager() {
   views.preview.hidden = true;
   views.manager.hidden = false;
-  refreshList();
+  // On first load, wait for auth to settle before rendering the list, so the
+  // empty-state welcome doesn't flash before signed-in cloud armies arrive.
+  if (authSettled) { refreshList(); return; }
+  showListLoading();
+  authReady.then(() => { if (parseRoute().view === 'manager') refreshList(); });
 }
 
 async function openArmy(id) {

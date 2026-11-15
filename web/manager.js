@@ -18,7 +18,7 @@ function cache() {
     drop: $('drop'), file: $('file'), pick: $('pick'), uploadStatus: $('upload-status'),
     pasteText: $('paste-text'), pasteAdd: $('paste-add'),
     list: $('army-list'), empty: $('army-empty'), deleteAll: $('delete-all'),
-    armiesHeading: $('armies-heading'),
+    armiesHeading: $('armies-heading'), listLoading: $('army-loading'),
     waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'), waUnload: $('wahapedia-unload'),
     migrate: $('migrate-banner'), migrateText: $('migrate-text'),
     migrateMove: $('migrate-move'), migrateDismiss: $('migrate-dismiss'),
@@ -78,9 +78,21 @@ export function initManager() {
   });
 }
 
+// Show just a spinner in the list panel (used on first load while auth/cloud
+// data settles, so the empty-state welcome doesn't flash before cloud armies).
+export function showListLoading() {
+  els.listLoading.hidden = false;
+  els.list.hidden = true;
+  els.empty.hidden = true;
+  els.armiesHeading.hidden = true;
+  els.deleteAll.hidden = true;
+}
+
 // Called by the router each time the manager view is shown.
 export async function refreshList() {
   const armies = await armyStore.list();
+  els.listLoading.hidden = true;
+  els.list.hidden = false;
   els.list.innerHTML = '';
   els.empty.hidden = armies.length > 0;
   els.armiesHeading.hidden = armies.length === 0;

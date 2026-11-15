@@ -212,6 +212,7 @@ select {
 .hold-act-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); }
 .army-act.hold-act.holding .hold-act-fill { width: 100%; transition: width 1s linear; }
 .hold-act-icon { position: relative; z-index: 1; }
+.list-loading { display: flex; justify-content: center; padding: 56px 0; }
 .empty-welcome { text-align: center; padding: 40px 20px; }
 .empty-logo { width: 56px; height: 56px; display: block; margin: 0 auto 14px; }
 .empty-welcome h3 { margin: 0 0 10px; font-size: 18px; }
