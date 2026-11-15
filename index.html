@@ -11,8 +11,10 @@
 </head>
 <body>
   <header class="topbar">
-    <h1><a href="#/" class="home-link">Muster Roll</a></h1>
-    <p>Printable Warhammer 40,000 quick-reference sheets from your army lists — generated entirely in your browser.</p>
+    <a href="#/" class="brand" title="Muster Roll — home">
+      <img class="brand-logo" src="assets/favicon.svg" alt="" aria-hidden="true" />
+      <h1>Muster Roll</h1>
+    </a>
   </header>
 
   <main>
@@ -48,9 +50,14 @@
         </div>
 
         <div class="panel list-panel">
-          <h2>Your armies</h2>
+          <h2 id="armies-heading">Your armies</h2>
           <ul id="army-list" class="army-list"></ul>
-          <p id="army-empty" class="empty" hidden>No armies yet. Add one from a roster export to get started.</p>
+          <div id="army-empty" class="empty-welcome" hidden>
+            <img class="empty-logo" src="assets/favicon.svg" alt="" aria-hidden="true" />
+            <h3>Welcome to Muster Roll</h3>
+            <p>Printable Warhammer 40,000 quick-reference sheets and cards from your army lists — generated entirely in your browser.</p>
+            <p class="empty-hint">No armies yet — add your first using the panel on the left.</p>
+          </div>
           <button id="delete-all" class="hold-btn" type="button" hidden title="Press and hold to delete every saved army">
             <span class="hold-label">Hold to delete all</span>
             <span class="hold-fill" aria-hidden="true"><span class="hold-label">Hold to delete all</span></span>

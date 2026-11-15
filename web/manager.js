@@ -18,6 +18,7 @@ function cache() {
     drop: $('drop'), file: $('file'), pick: $('pick'), uploadStatus: $('upload-status'),
     pasteText: $('paste-text'), pasteAdd: $('paste-add'),
     list: $('army-list'), empty: $('army-empty'), deleteAll: $('delete-all'),
+    armiesHeading: $('armies-heading'),
     waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'), waUnload: $('wahapedia-unload'),
   };
 }
@@ -79,6 +80,7 @@ export async function refreshList() {
   const armies = await armyStore.list();
   els.list.innerHTML = '';
   els.empty.hidden = armies.length > 0;
+  els.armiesHeading.hidden = armies.length === 0;
   els.deleteAll.hidden = armies.length === 0;
   for (const a of armies) els.list.appendChild(armyCard(a));
 }
