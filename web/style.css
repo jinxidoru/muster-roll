@@ -183,19 +183,22 @@ select {
 .army-act + .army-act { border-top: 1px solid var(--line); }
 .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
 
-/* Press-and-hold "delete all" — the fill grows while held; completing the
-   width transition is what triggers the delete, so a quick tap does nothing. */
+/* Press-and-hold "delete all" — a red fill wipes left→right while held; the
+   label is drawn twice (red on white, white on red) so it stays readable as the
+   fill passes. Completing the width transition is what triggers the delete, so a
+   quick tap/click does nothing, and user-select:none stops text highlighting. */
 .hold-btn {
-  position: relative; overflow: hidden; width: 100%; margin-top: 14px;
-  padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px;
-  background: #fff; color: var(--accent); font: inherit; font-weight: 600;
-  font-size: 13px; cursor: pointer; user-select: none; -webkit-user-select: none;
-  touch-action: none;
+  position: relative; overflow: hidden; display: block; width: 100%; margin-top: 14px;
+  padding: 0; border: 1px solid var(--accent); border-radius: 6px; background: #fff;
+  cursor: pointer; font: inherit; user-select: none; -webkit-user-select: none; touch-action: none;
 }
-.hold-btn:hover { border-color: var(--accent); }
-.hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); opacity: .16; }
+.hold-label {
+  display: block; padding: 9px 12px; text-align: left; white-space: nowrap;
+  font-weight: 600; font-size: 13px; color: var(--accent);
+}
+.hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; overflow: hidden; background: var(--accent); }
+.hold-fill .hold-label { color: #fff; }
 .hold-btn.holding .hold-fill { width: 100%; transition: width 1.3s linear; }
-.hold-label { position: relative; z-index: 1; }
 
 .crumb { margin: 0 0 12px; font-size: 13px; }
 .back-link { text-decoration: none; }
