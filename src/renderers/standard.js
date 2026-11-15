@@ -411,7 +411,8 @@ function render(army, options = {}) {
   const rules = armyRules(army);
   const enhancements = enhWithUnit ? [] : army.enhancements;
   const stratagems = opts.showStratagems ? (army.stratagems || []) : [];
-  const hasRulesGroup = rules.length || enhancements.length || stratagems.length;
+  const coreStrats = opts.showCoreStratagems ? (army.coreStratagems || []) : [];
+  const hasRulesGroup = rules.length || enhancements.length || stratagems.length || coreStrats.length;
 
   if (hasRulesGroup && opts.pageBreaks) doc += `#pagebreak()\n`;
 
@@ -442,6 +443,13 @@ function render(army, options = {}) {
   if (stratagems.length) {
     doc += `#section("Stratagems")\n`;
     doc += sectionList(stratagems.map(stratagemStepItem), opts.detailsTwoColumn);
+  }
+
+  // Core stratagems: the universal ones, their own section just below the
+  // detachment stratagems (opt-in, off by default).
+  if (coreStrats.length) {
+    doc += `#section("Core Stratagems")\n`;
+    doc += sectionList(coreStrats.map(stratagemStepItem), opts.detailsTwoColumn);
   }
 
   // Keyword glossary: define every weapon/core keyword the army references AND
@@ -485,15 +493,6 @@ function render(army, options = {}) {
         doc += `#text(size: 6.4pt, fill: luma(150), style: "italic")[${undefinedCount} other referenced keyword${undefinedCount === 1 ? '' : 's'} ${undefinedCount === 1 ? 'has' : 'have'} no definition available.]\n\n`;
       }
     }
-  }
-
-  // Core stratagems: the universal ones, as their own section at the very end
-  // (opt-in, off by default). Kept separate from the detachment's stratagems.
-  const coreStrats = opts.showCoreStratagems ? (army.coreStratagems || []) : [];
-  if (coreStrats.length) {
-    if (opts.pageBreaks) doc += `#pagebreak()\n`;
-    doc += `#section("Core Stratagems")\n`;
-    doc += sectionList(coreStrats.map(stratagemStepItem), opts.detailsTwoColumn);
   }
 
   return doc;

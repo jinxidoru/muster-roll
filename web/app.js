@@ -561,7 +561,9 @@ function syncSelectAllLabel() {
   const units = currentRenderer.unitList(army);
   const aux = auxCards();
   const all = units.every((u) => cardSelection.has(u.index)) && aux.every((c) => !auxDeselected.has(c.key));
-  els.selectAll.textContent = all ? 'Unselect all' : 'Select all';
+  const label = all ? 'Unselect all' : 'Select all';
+  els.selectAll.title = label;
+  els.selectAll.setAttribute('aria-label', label);
 }
 
 // Paper dimensions in points (Typst's SVG user units), for locating page breaks.

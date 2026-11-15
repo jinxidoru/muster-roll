@@ -183,6 +183,20 @@ select {
 .army-act + .army-act { border-top: 1px solid var(--line); }
 .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
 
+/* Press-and-hold "delete all" — the fill grows while held; completing the
+   width transition is what triggers the delete, so a quick tap does nothing. */
+.hold-btn {
+  position: relative; overflow: hidden; width: 100%; margin-top: 14px;
+  padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: #fff; color: var(--accent); font: inherit; font-weight: 600;
+  font-size: 13px; cursor: pointer; user-select: none; -webkit-user-select: none;
+  touch-action: none;
+}
+.hold-btn:hover { border-color: var(--accent); }
+.hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); opacity: .16; }
+.hold-btn.holding .hold-fill { width: 100%; transition: width 1.3s linear; }
+.hold-label { position: relative; z-index: 1; }
+
 .crumb { margin: 0 0 12px; font-size: 13px; }
 .back-link { text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -243,7 +257,11 @@ select {
 .card-check { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .card-check input { cursor: pointer; }
 .card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-out svg { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .15); }
+/* pointer-events: none — a preview card SVG can render slightly taller than its
+   laid-out cell and overlap a neighbouring card's select checkbox; making the
+   (non-interactive) SVG transparent to clicks keeps every checkbox clickable,
+   especially after scrolling. */
+.card-out svg { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .15); pointer-events: none; }
 .card-out .err { color: var(--accent); font-size: 10px; white-space: pre-wrap; }
 
 /* Text button (Select/Unselect all) — same box as .btn but with a label. */

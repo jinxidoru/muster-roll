@@ -17,7 +17,7 @@ function cache() {
   els = {
     drop: $('drop'), file: $('file'), pick: $('pick'), uploadStatus: $('upload-status'),
     pasteText: $('paste-text'), pasteAdd: $('paste-add'),
-    list: $('army-list'), empty: $('army-empty'),
+    list: $('army-list'), empty: $('army-empty'), deleteAll: $('delete-all'),
     waStatus: $('wahapedia-status'), waSync: $('wahapedia-sync'), waUnload: $('wahapedia-unload'),
   };
 }
@@ -58,6 +58,20 @@ export function initManager() {
     await refreshWahapedia();
   });
   refreshWahapedia();
+
+  // Delete-all: a press-and-hold button whose fill grows while held and only
+  // fires once fully filled (releasing early cancels). No accidental wipes.
+  const cancelHold = () => els.deleteAll.classList.remove('holding');
+  els.deleteAll.addEventListener('pointerdown', (e) => { e.preventDefault(); els.deleteAll.classList.add('holding'); });
+  els.deleteAll.addEventListener('pointerup', cancelHold);
+  els.deleteAll.addEventListener('pointerleave', cancelHold);
+  els.deleteAll.addEventListener('pointercancel', cancelHold);
+  els.deleteAll.addEventListener('transitionend', async (e) => {
+    if (e.propertyName !== 'width' || !els.deleteAll.classList.contains('holding')) return;
+    els.deleteAll.classList.remove('holding');
+    for (const a of await armyStore.list()) await armyStore.remove(a.id);
+    await refreshList();
+  });
 }
 
 // Called by the router each time the manager view is shown.
@@ -65,6 +79,7 @@ export async function refreshList() {
   const armies = await armyStore.list();
   els.list.innerHTML = '';
   els.empty.hidden = armies.length > 0;
+  els.deleteAll.hidden = armies.length === 0;
   for (const a of armies) els.list.appendChild(armyCard(a));
 }
 
