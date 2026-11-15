@@ -73,7 +73,10 @@ export function initManager() {
   els.deleteAll.addEventListener('transitionend', async (e) => {
     if (e.propertyName !== 'width' || !els.deleteAll.classList.contains('holding')) return;
     els.deleteAll.classList.remove('holding');
-    for (const a of await armyStore.list()) await armyStore.remove(a.id);
+    const armies = await armyStore.list();
+    els.list.innerHTML = ''; // optimistic: clear now, delete in the background
+    syncEmptyState();
+    await Promise.all(armies.map((a) => armyStore.remove(a.id).catch(() => {})));
     await refreshList();
   });
 }
@@ -212,13 +215,25 @@ function deleteHoldBtn(a) {
   b.addEventListener('pointerup', cancel);
   b.addEventListener('pointerleave', cancel);
   b.addEventListener('pointercancel', cancel);
-  b.addEventListener('transitionend', async (e) => {
+  b.addEventListener('transitionend', (e) => {
     if (e.propertyName !== 'width' || !b.classList.contains('holding')) return;
     b.classList.remove('holding');
-    await armyStore.remove(a.id);
-    await refreshList();
+    // Optimistic: drop the card immediately (the cloud delete can round-trip in
+    // the background); only reconcile from the store if the delete fails.
+    b.closest('.army-card')?.remove();
+    syncEmptyState();
+    armyStore.remove(a.id).catch(() => refreshList());
   });
   return b;
+}
+
+// Toggle the heading / welcome / delete-all based on how many cards are shown
+// (used for instant updates without re-querying the store).
+function syncEmptyState() {
+  const n = els.list.querySelectorAll('.army-card').length;
+  els.empty.hidden = n > 0;
+  els.armiesHeading.hidden = n === 0;
+  els.deleteAll.hidden = n === 0;
 }
 
 // --- sign-in migration offer ------------------------------------------------
